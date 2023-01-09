@@ -20,13 +20,13 @@ polished_custom_sign_in <- polished::sign_in_ui_default(
   color = "#FFFFFF",
   button_color = "#17153a",
   company_name = "teachvatory",
-  logo_top = shiny::tags$img(
-    src = "www/img/logosymbol_white_background.png",
+  logo_top = tagList(tags$img(
+    src = "https://i.ibb.co/mBbc23k/logosymbol-white-background.png",
     alt = "teachvatory Logo",
     style = "width: 125px; margin-top: 30px; margin-bottom: 30px;"
-  ),
-  logo_bottom = shiny::tags$img(
-    src = "www/img/logo_white_background.png",
+  )),
+  logo_bottom = tags$img(
+    src = "https://i.ibb.co/nwFG9TX/logo-white-background.png",
     alt = "Teachvatory logo",
     style = "width: 200px; margin-bottom: 15px; padding-top: 15px;"
   ),

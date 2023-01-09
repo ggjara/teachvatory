@@ -21,7 +21,7 @@ run_app <- function(
       ui = polished::secure_ui(
         app_ui,
         sign_in_page_ui = polished_custom_sign_in,
-        custom_admin_button_ui = polished_custom_admin_button
+        custom_admin_button_ui = NULL
       ),
       server = polished::secure_server(app_server),
       onStart = onStart,

@@ -18,16 +18,29 @@ app_server <- function(input, output, session) {
       image = "https://adminlte.io/themes/AdminLTE/dist/img/user2-160x160.jpg",
       title = session$userData$user()$email,
       subtitle = if(session$userData$user()$is_admin) "Admin" else "User",
-      #footer = p("The footer", class = "text-center"),
+      # footer = p("The footer", class = "text-center"),
       dashboardUserItem(
         width = 12,
-        bs4Dash::actionButton(
-          inputId = "sign_out",
-          label = "Sign Out",
-          icon = icon("sign-out-alt"),
-          #width = "100px",
-          size = "sm",
-          status = "danger"
+        tagList(
+          bs4Dash::actionButton(
+            inputId = "sign_out",
+            label = "Sign Out",
+            icon = icon("sign-out-alt"),
+            # width = "100px",
+            size = "sm",
+            status = "danger"
+          ),
+          if(session$userData$user()$is_admin){
+            bs4Dash::actionButton(
+            inputId = NS("polished", "go_to_admin_panel"),
+            label = "Admin panel",
+            # icon = icon("sign-out-alt"),
+            # width = "100px",
+            size = "sm",
+            status = "secondary"
+          )
+          }
+         
         )
       )
     )

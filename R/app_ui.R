@@ -35,7 +35,7 @@ app_ui <- function(request) {
         id = "sidebar",
         status = "primary",
         elevation = 3,
-        collapsed = TRUE, 
+        collapsed = TRUE,
         # bs4Dash::sidebarUserPanel(name = tagList(
         #   shiny::textOutput(outputId = "sidebar_user")
         # )),
