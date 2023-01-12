@@ -4,17 +4,17 @@ options(
   gargle_oauth_cache = ".secrets"
 )
 
-#' Get courses from a dashabord path
+#'Get courses from a dashabord path
 #'
 #' @description Filter the files that are in the dashboard folder and
 #' follows the pattern "Course Items [course_name]".
 #'
 #' @param path_dashboard A string (url) of the path to the dashboard folder.
-#' 
+#'
 #' @return A filtered dribble of the files in the dashboard folder or `NULL` if fail.
 #'
 #' @noRd
-#'@import dplyr stringr googledrive 
+#'@import dplyr stringr googledrive
 get_courses <- function(path_dashboard) {
   tryCatch(
     {
@@ -36,10 +36,10 @@ get_courses <- function(path_dashboard) {
 #' Get metadata of a googlesheet
 #'
 #' @description Filter a `directory` (dribble) by `filter`
-#' 
+#'
 #' @param directory A dribble of files in a directory
 #' @param filter A string of the file to open
-#' 
+#'
 #' @return Metadata of the googlesheet or `NULL` if fail.
 #'
 #' @noRd

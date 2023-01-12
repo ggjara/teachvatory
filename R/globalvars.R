@@ -1,8 +1,11 @@
+# Here you should put not-sensitive variables used in the
+# app's logic
+
 # Path of One Dashboard to Rule them All
-PATH_DASHBOARD = "https://drive.google.com/drive/u/1/folders/1HFEBLVmrWReWn8DNwoTS7nrS6XZpAcdQ"
+PATH_DASHBOARD <- "https://drive.google.com/drive/u/1/folders/1HFEBLVmrWReWn8DNwoTS7nrS6XZpAcdQ"
 
 # Regexp of questions in quizzes to take out of the question select inputs.
-QUESTIONS_TO_TAKE_OUT = c(
+QUESTIONS_TO_TAKE_OUT <- c(
   "teachly",
   "email",
   "your name",
@@ -12,4 +15,4 @@ QUESTIONS_TO_TAKE_OUT = c(
 )
 
 # Regexp of name field in quiz
-NAME_FIELD_QUIZ = "Your Name"
+NAME_FIELD_QUIZ <- "Your Name"

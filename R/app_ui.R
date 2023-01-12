@@ -20,7 +20,7 @@ app_ui <- function(request) {
           title = "Teachvatory",
           color = "primary",
           image = "www/img/logosymbol_dark_background.png"
-          #image = "https://www.hks.harvard.edu/sites/default/files/styles/employee_grayscale/public/bio_images/7008-1661999445.jpg" # nolint
+          # image = "https://www.hks.harvard.edu/sites/default/files/styles/employee_grayscale/public/bio_images/7008-1661999445.jpg" # nolint
         ),
         skin = "light",
         status = "white",
@@ -47,19 +47,24 @@ app_ui <- function(request) {
             icon = icon("dashboard")
           ),
           bs4Dash::bs4SidebarMenuItem("Metrics",
-                                      tabName = "metrics",
-                                      icon = icon("th")),
+            tabName = "metrics",
+            icon = icon("th")
+          ),
           bs4Dash::bs4SidebarMenuItem(
             "Roster",
             tabName = "roster",
-            icon = icon(lib = "glyphicon",
-                        "user")
+            icon = icon(
+              lib = "glyphicon",
+              "user"
+            )
           ),
           bs4Dash::bs4SidebarMenuItem(
             "Conventions",
             tabName = "conventions",
-            icon = icon(lib = "glyphicon",
-                        "list")
+            icon = icon(
+              lib = "glyphicon",
+              "list"
+            )
           )
         )
       ),
@@ -101,25 +106,37 @@ app_ui <- function(request) {
           ),
           bs4Dash::controlbarItem(
             title = "Other config",
-            shiny::textInput(inputId = "path_dashboard",
-                             "URL Dashboard",
-                             value = PATH_DASHBOARD)
+            shiny::textInput(
+              inputId = "path_dashboard",
+              "URL Dashboard",
+              value = PATH_DASHBOARD
+            )
           )
         )
       ),
-      footer = bs4Dash::dashboardFooter(left = "Created by Dan's Team",
-                                        right = "2022"),
+      footer = bs4Dash::dashboardFooter(
+        left = "Created by Marco, Dan, & Gonzalo",
+        right = "2022"
+      ),
       body = bs4Dash::dashboardBody(
         bs4Dash::tabItems(
-          bs4Dash::tabItem(tabName = "quiz",
-                           waiter::useWaiter(),
-                           mod_quiz_ui("quiz_1")),
-          bs4Dash::tabItem(tabName = "metrics",
-                           mod_metrics_ui("metrics_1")),
-          bs4Dash::tabItem(tabName = "roster",
-                           mod_roster_ui("roster_1")),
-          bs4Dash::tabItem(tabName = "conventions",
-                           mod_conventions_ui("conventions_1"))
+          bs4Dash::tabItem(
+            tabName = "quiz",
+            waiter::useWaiter(),
+            mod_quiz_ui("quiz_1")
+          ),
+          bs4Dash::tabItem(
+            tabName = "metrics",
+            mod_metrics_ui("metrics_1")
+          ),
+          bs4Dash::tabItem(
+            tabName = "roster",
+            mod_roster_ui("roster_1")
+          ),
+          bs4Dash::tabItem(
+            tabName = "conventions",
+            mod_conventions_ui("conventions_1")
+          )
         )
       )
     )
@@ -135,8 +152,10 @@ app_ui <- function(request) {
 #' @importFrom golem add_resource_path activate_js favicon bundle_resources
 #' @noRd
 golem_add_external_resources <- function() {
-  add_resource_path("www",
-                    app_sys("app/www"))
+  add_resource_path(
+    "www",
+    app_sys("app/www")
+  )
 
   tags$head(
     favicon(),
@@ -145,6 +164,6 @@ golem_add_external_resources <- function() {
       app_title = "teachvatory"
     )
   )
-            # Add here other external resources
-            # for example, you can add shinyalert::useShinyalert())
+  # Add here other external resources
+  # for example, you can add shinyalert::useShinyalert())
 }

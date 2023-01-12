@@ -1,8 +1,11 @@
 #' @title Get column name of ID field
 #'
+#' @description Detect what is the name of the column variables that
+#' is used as the student identifier in the quiz
+#'
 #' @param quiz A data frame.
-#' 
-#' @return Column name.
+#'
+#' @return Column name as string or `""` if not found.
 #' @noRd
 #' @import stringr dplyr
 get_idcolname <- function(quiz) {
@@ -33,8 +36,9 @@ get_idcolname <- function(quiz) {
 #' @param quiz A data frame.
 #' @param roster A data frame.
 #' @param col_to_match A string of the column name to match.
-#' 
-#' @return A dataframe
+#'
+#' @return A dataframe with the quiz + the roster's teachly index.
+#' If roster is empty, teachly index will be empty.
 #' @noRd
 #' @import stringr dplyr
 join_quiz_roster <- function(quiz, roster, col_to_match) {
@@ -50,26 +54,29 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
   if (is.null(roster) || nrow(roster) == 0 ||
         !all(c("standardized_name", "teachly") %in% colnames(roster))) {
     quiz %>%
-      dplyr::left_join(dplyr::tibble("standardized_name" = "XXX",
-                       "teachly" = 0) %>%
-                  dplyr::rename(!!col_to_match := "standardized_name") %>%
-                  dplyr::select(c(col_to_match, "teachly")),
-                by = col_to_match)
+      dplyr::left_join(
+        dplyr::tibble("standardized_name" = "XXX", "teachly" = 0) %>%
+          dplyr::rename(!!col_to_match := "standardized_name") %>%
+          dplyr::select(c(col_to_match, "teachly")),
+        by = col_to_match
+      )
   } else {
     quiz %>%
-      dplyr::left_join(roster %>%
-                  dplyr::rename(!!col_to_match := "standardized_name") %>%
-                  dplyr::select(c(col_to_match, "teachly")),
-                by = col_to_match)
+      dplyr::left_join(
+        roster %>%
+          dplyr::rename(!!col_to_match := "standardized_name") %>%
+          dplyr::select(c(col_to_match, "teachly")),
+        by = col_to_match
+      )
   }
 }
 
 #' Get questions from quiz
-#' 
+#'
 #' @description Get questions from quiz by removing questions of `QUESTIONS_TO_TAKE_OUT`.
 #'
 #' @param quiz A data frame.
-#' 
+#'
 #' @return A list of questions.
 #' @noRd
 #' @import stringr dplyr

@@ -354,7 +354,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       DT::datatable(
         quiz_processed() %>%
           dplyr::select(cols_toselect) %>%
-          dplyr::rename(!!cols_toshow[3] := .data[[input$filter_crosstab1]],!!cols_toshow[4] := .data[[input$filter_crosstab2]]),
+          dplyr::rename(!!cols_toshow[3] := .data[[input$filter_crosstab1]], !!cols_toshow[4] := .data[[input$filter_crosstab2]]),
         escape = FALSE,
         rownames = FALSE,
         filter = "top",

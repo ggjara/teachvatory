@@ -17,7 +17,7 @@ app_server <- function(input, output, session) {
       name = stringr::str_replace(session$userData$user()$email, "@.*", ""),
       image = "https://adminlte.io/themes/AdminLTE/dist/img/user2-160x160.jpg",
       title = session$userData$user()$email,
-      subtitle = if(session$userData$user()$is_admin) "Admin" else "User",
+      subtitle = if (session$userData$user()$is_admin) "Admin" else "User",
       # footer = p("The footer", class = "text-center"),
       dashboardUserItem(
         width = 12,
@@ -30,24 +30,22 @@ app_server <- function(input, output, session) {
             size = "sm",
             status = "danger"
           ),
-          if(session$userData$user()$is_admin){
+          if (session$userData$user()$is_admin) {
             bs4Dash::actionButton(
-            inputId = NS("polished", "go_to_admin_panel"),
-            label = "Admin panel",
-            # icon = icon("sign-out-alt"),
-            # width = "100px",
-            size = "sm",
-            status = "secondary"
-          )
+              inputId = NS("polished", "go_to_admin_panel"),
+              label = "Admin panel",
+              # icon = icon("sign-out-alt"),
+              # width = "100px",
+              size = "sm",
+              status = "secondary"
+            )
           }
-         
         )
       )
     )
   })
-  # output$sidebar_user <-
-  #   shiny::renderText(session$userData$user()$email)
 
+  # Initialize waiter when loading course
   w <- waiter::Waiter$new(
     html = shiny::tagList(
       waiter::spin_pixel(),
@@ -159,10 +157,11 @@ app_server <- function(input, output, session) {
 
   ####### Render #######
   # Render text in sidebar
-    output$sidebar_intro <- shiny::renderText({
-      shiny::req(roster())
-      paste0("Analyzing ", selected_course())})
-    
+  output$sidebar_intro <- shiny::renderText({
+    shiny::req(roster())
+    paste0("Analyzing ", selected_course())
+  })
+
   ####### End Render #######
 
   ####### Call Modules  #######

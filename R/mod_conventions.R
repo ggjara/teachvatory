@@ -4,10 +4,10 @@
 #'
 #' @param id,input,output,session Internal parameters for {shiny}.
 #'
-#' @noRd 
+#' @noRd
 #'
-#' @importFrom shiny NS tagList 
-mod_conventions_ui <- function(id){
+#' @importFrom shiny NS tagList
+mod_conventions_ui <- function(id) {
   ns <- NS(id)
   tagList(
     bs4Dash::box(
@@ -41,19 +41,19 @@ mod_conventions_ui <- function(id){
     )
   )
 }
-    
+
 #' conventions Server Functions
 #'
-#' @noRd 
-mod_conventions_server <- function(id){
-  moduleServer( id, function(input, output, session){
+#' @noRd
+mod_conventions_server <- function(id) {
+  moduleServer(id, function(input, output, session) {
     ns <- session$ns
- 
+
   })
 }
-    
+
 ## To be copied in the UI
 # mod_conventions_ui("conventions_1")
-    
+
 ## To be copied in the server
 # mod_conventions_server("conventions_1")
