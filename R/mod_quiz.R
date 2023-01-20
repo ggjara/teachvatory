@@ -49,16 +49,24 @@ mod_quiz_ui <- function(id) {
         shiny::tabPanel(
           title = "Performance",
           fluidRow(
-            bs4Dash::bs4InfoBoxOutput(ns("infobox_1")),
-            bs4Dash::bs4InfoBoxOutput(ns("infobox_2")),
-            bs4Dash::bs4InfoBoxOutput(ns("infobox_3"))
+            bs4Dash::column(width = 4,
+                            shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_1"), width=NULL), proxy.height = 80)),
+
+            bs4Dash::column(width = 4,
+                            shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_2"), width=NULL), proxy.height = 80)),
+            bs4Dash::column(width = 4,
+                            shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_3"), width=NULL), proxy.height = 80))
           ),
-          uiOutput(ns("performance_box"))
+          shinycssloaders::withSpinner(uiOutput(ns("performance_box")), proxy.height = 56)
         ),
         shiny::tabPanel(title = "Responses time",
-                        highcharter::highchartOutput(outputId = ns(
+                          highcharter::highchartOutput(outputId = ns(
                           "responses_time_graph"
-                        )))
+                        ))),
+        shiny::tabPanel(
+          title = "Quiz Viz",
+          mod_quiz_questionviz_ui("quiz_questionviz_1")
+        )
       )
     ),
     shiny::fluidRow(
@@ -95,9 +103,9 @@ mod_quiz_ui <- function(id) {
           )
         ),
         shiny::fluidRow(column(width = 12,
-                               DT::DTOutput(ns(
+                               shinycssloaders::withSpinner(DT::DTOutput(ns(
                                  "quiz_table"
-                               ))))
+                               )))))
       )
     )
   )
@@ -185,11 +193,13 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     })
 
     shiny::observeEvent(questions(), {
+      freezeReactiveValue(input, "filter_crosstab1")
+      freezeReactiveValue(input, "filter_crosstab2")
       shinyWidgets::updatePickerInput(
         session,
         inputId = "filter_crosstab1",
         choices = questions(),
-        selected = NULL
+        selected = questions()[1]
       )
       shinyWidgets::updatePickerInput(
         session,
@@ -211,13 +221,13 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-      bs4Dash::bs4InfoBox(
-        title = "Students in roster",
-        value = val,
-        icon = shiny::icon("users-rectangle", lib = "font-awesome"),
-        fill = TRUE,
-        color = "gray"
-      )
+        bs4Dash::bs4InfoBox(
+          title = "Students in roster",
+          value = val,
+          icon = shiny::icon("users-rectangle", lib = "font-awesome"),
+          fill = TRUE,
+          color = "gray"
+        )
     })
 
     output$infobox_2 <- bs4Dash::renderbs4InfoBox({
@@ -228,13 +238,14 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-      bs4Dash::bs4InfoBox(
-        title = "Responses",
-        value = val,
-        icon = shiny::icon("user-check", lib = "font-awesome"),
-        fill = TRUE,
-        color = "success"
-      )
+
+        bs4Dash::bs4InfoBox(
+          title = "Responses",
+          value = val,
+          icon = shiny::icon("user-check", lib = "font-awesome"),
+          fill = TRUE,
+          color = "success"
+        )
     })
 
     output$infobox_3 <- bs4Dash::renderbs4InfoBox({
@@ -245,13 +256,13 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-      bs4Dash::bs4InfoBox(
-        title = "Left to answer",
-        value = val,
-        icon = shiny::icon("user-minus", lib = "font-awesome"),
-        fill = TRUE,
-        color = "danger"
-      )
+        bs4Dash::bs4InfoBox(
+          title = "Left to answer",
+          value = val,
+          icon = shiny::icon("user-minus", lib = "font-awesome"),
+          fill = TRUE,
+          color = "danger"
+        )
     })
 
 
@@ -277,17 +288,17 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         column(
           width = 12,
           "Submission Rate",
-          bs4Dash::bs4ProgressBar(
-            min(pct * 100, 100),
-            min = 0,
-            max = 100,
-            vertical = FALSE,
-            striped = FALSE,
-            animated = TRUE,
-            status = status,
-            size = NULL,
-            label = paste0(round(pct * 100, 1), "%")
-          )
+            bs4Dash::bs4ProgressBar(
+              min(pct * 100, 100),
+              min = 0,
+              max = 100,
+              vertical = FALSE,
+              striped = FALSE,
+              animated = TRUE,
+              status = status,
+              size = NULL,
+              label = paste0(round(pct * 100, 1), "%")
+            )
         )
       ))
     })
@@ -354,9 +365,11 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       DT::datatable(
         quiz_processed() %>%
           dplyr::select(cols_toselect) %>%
-          dplyr::rename(!!cols_toshow[3] := .data[[input$filter_crosstab1]], !!cols_toshow[4] := .data[[input$filter_crosstab2]]),
+          dplyr::rename(!!cols_toshow[3] := .data[[input$filter_crosstab1]],
+                        !!cols_toshow[4] := .data[[input$filter_crosstab2]]),
         escape = FALSE,
         rownames = FALSE,
+        style = "bootstrap4",
         filter = "top",
         selection = "none",
         options = list(
@@ -370,7 +383,10 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     })
     ####### End Render #######
 
+    # output
+    reactive(quiz_processed())
   })
+  #mod_quiz_questionviz_server("quiz_questionviz_1", FALSE, main_inputs, quiz_processed)
 }
 
 ## To be copied in the UI

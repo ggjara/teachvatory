@@ -2,7 +2,7 @@
 # app folder needed to connect to google files 
 # through the `googledrive` and `googlesheets4` package
 
-# designate working directory
+# designate working directory (change for directory)
 setwd("~/Dropbox/ShinyProjects/teachvatory/")
 
 # designate project-specific cache
