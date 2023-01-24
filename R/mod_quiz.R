@@ -344,7 +344,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       col_to_match <- id_colname()
       brks <- seq(0, 1, 0.1)
       clrs <-
-        colorRampPalette(c("red", "yellow", "green"))(length(brks) + 1)
+        colorRampPalette(c("#dc3545", "#ffc107", "#28a745"))(length(brks) + 1)
 
       cols_toselect <- c(col_to_match,
                          "teachly",
@@ -375,7 +375,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         options = list(
           pageLength = 100,
           autowidth = TRUE,
-          scrollX = TRUE
+          scrollX = TRUE,
+          buttons = c('copy', 'csv', 'excel')
         )
       ) %>%
         DT::formatStyle(c("teachly"),

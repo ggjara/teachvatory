@@ -96,11 +96,13 @@ app_ui <- function(request) {
             shiny::selectInput(
               inputId = "filter_roster_sheet",
               label = "Roster Sheet Name",
-              choices = c("roster")
+              choices = c(""),
+              selected = ""
             ),
             bs4Dash::actionButton(
               inputId = "load_course",
               label = "Load Course",
+
               status = "primary"
             )
           ),
@@ -165,5 +167,7 @@ golem_add_external_resources <- function() {
     )
   )
   # Add here other external resources
+  # Use Shinyjs
+  shinyjs::useShinyjs()
   # for example, you can add shinyalert::useShinyalert())
 }

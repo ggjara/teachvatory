@@ -89,6 +89,16 @@ app_server <- function(input, output, session) {
     get_metadata(course_directory(), input$filter_masterquiz)
   })
 
+  shinyjs::disable("load_course")
+  shiny::observeEvent(input$filter_roster_sheet, {
+    if(input$filter_roster_sheet==""){
+      shinyjs::disable("load_course")
+    } else{
+      shinyjs::enable("load_course")
+    }
+  }, ignoreNULL = FALSE)
+
+
   # Load Roster file + using roster sheet_name
   # Returns tibble() with the Roster dataframe
   roster <- shiny::eventReactive(input$load_course, {
@@ -175,5 +185,6 @@ app_server <- function(input, output, session) {
   # Call the submodule with the quiz processed.
   # The quiz processed is a reactive value of the quiz module (see last line of code of mod_quiz.R)
   mod_quiz_questionviz_server("quiz_questionviz_1", FALSE, main_inputs, quiz_processed)
+  mod_metrics_server("metrics_1", FALSE, main_inputs = main_inputs)
   mod_roster_server("roster_1", FALSE, main_inputs = main_inputs)
 }

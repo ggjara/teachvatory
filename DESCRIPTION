@@ -8,6 +8,7 @@ License: MIT + file LICENSE
 Imports: 
     bs4Dash,
     config (>= 0.3.1),
+    data.table,
     dplyr,
     DT,
     golem (>= 0.3.5),
@@ -17,7 +18,9 @@ Imports:
     polished,
     shiny (>= 1.7.4),
     shinycssloaders,
+    shinyjs,
     shinyWidgets,
+    sparkline,
     stringr,
     waiter
 Encoding: UTF-8
