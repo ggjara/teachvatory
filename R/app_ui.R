@@ -8,6 +8,8 @@ app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
     golem_add_external_resources(),
+    # Use Shinyjs
+    shinyjs::useShinyjs(),
     # Your application UI logic
     bs4Dash::dashboardPage(
       preloader = list(html = waiter::spin_pixel()),
@@ -167,7 +169,5 @@ golem_add_external_resources <- function() {
     )
   )
   # Add here other external resources
-  # Use Shinyjs
-  shinyjs::useShinyjs()
   # for example, you can add shinyalert::useShinyalert())
 }

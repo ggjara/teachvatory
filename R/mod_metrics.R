@@ -95,6 +95,10 @@ mod_metrics_ui <- function(id) {
              step = 1,
              value = 0
            ),
+           shiny::tags$p("People who have not submitted the last ",
+                         shiny::textOutput(outputId = ns("n_lastquizzes_output"),
+                                           inline = TRUE),
+                         " quizzes."),
            shinycssloaders::withSpinner(DT::DTOutput(ns(
              "metrics_lastquizzes"
            )))
@@ -121,8 +125,6 @@ mod_metrics_server <-
 
       shinyjs::disable("load_metrics")
       shiny::observeEvent(input$filter_quiz, {
-        print("Cambio")
-        print(input$filter_quiz)
         if(is.null(input$filter_quiz)){
           shinyjs::disable("load_metrics")
         }
@@ -159,6 +161,12 @@ mod_metrics_server <-
           choices = quizzes(),
           selected = NULL
         )
+      })
+
+      # Send number of quizzes
+      output$n_lastquizzes_output <- shiny::renderText({
+        shiny::req(input$n_lastquizzes)
+        input$n_lastquizzes
       })
 
       # Full Dataframe
@@ -304,7 +312,7 @@ mod_metrics_server <-
           escape = FALSE,
           rownames = FALSE,
           extensions = "Buttons",
-          style = "bootstrap4",
+          #style = "bootstrap4",
           filter = "top",
           selection = "none",
           options = list(
@@ -382,8 +390,9 @@ function(){
           escape = FALSE,
           rownames = FALSE,
           extensions = "Buttons",
-          style = "bootstrap4",
+          #style = "bootstrap4",
           selection = "none",
+          filter = "top",
           options = list(
             pageLength = 100,
             autowidth = TRUE,
