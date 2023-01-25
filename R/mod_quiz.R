@@ -50,12 +50,12 @@ mod_quiz_ui <- function(id) {
           title = "Performance",
           fluidRow(
             bs4Dash::column(width = 4,
-                            shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_1"), width=NULL), proxy.height = 80)),
+                            shinycssloaders::withSpinner(bs4Dash::bs4ValueBoxOutput(ns("valuebox_1"), width=NULL), proxy.height = 142)),
 
             bs4Dash::column(width = 4,
-                            shinycssloaders::withSpinner(bs4Dash::bs4ValueBoxOutput(ns("infobox_2"), width=NULL), proxy.height = 80)),
+                            shinycssloaders::withSpinner(bs4Dash::bs4ValueBoxOutput(ns("valuebox_2"), width=NULL), proxy.height = 142)),
             bs4Dash::column(width = 4,
-                            shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_3"), width=NULL), proxy.height = 80))
+                            shinycssloaders::withSpinner(bs4Dash::bs4ValueBoxOutput(ns("valuebox_3"), width=NULL), proxy.height = 142))
           ),
           shinycssloaders::withSpinner(uiOutput(ns("performance_box")), proxy.height = 56)
         ),
@@ -171,6 +171,53 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     ####### End Reactive Values #######
 
+    ####### Modals #######
+
+    shiny::observeEvent(input$open_modal_responses, {
+      data_to_show <- dplyr::tibble()
+      tryCatch({
+        data_to_show <- quiz_processed()[id_colname()]
+      }, error = function(e){
+        data_to_show <- dplyr::tibble()
+      })
+      shiny::showModal(
+        students_list_modal(data_to_show, title = "Students who have submitted the quiz")
+      )
+    })
+
+    shiny::observeEvent(input$open_modal_roster, {
+      data_to_show <- dplyr::tibble()
+      tryCatch({
+        data_to_show <- main_inputs$roster()["standardized_name"]
+      }, error = function(e){
+        data_to_show <- dplyr::tibble()
+      })
+      shiny::showModal(
+        students_list_modal(data_to_show, title = "Students in roster")
+      )
+    })
+
+    shiny::observeEvent(input$open_modal_left, {
+      data_to_show <- dplyr::tibble()
+      tryCatch({
+        dif <- dplyr::setdiff(main_inputs$roster()[["standardized_name"]],
+                              quiz_processed()[[id_colname()]])
+        data_to_show <- dplyr::tibble("standardized_name" = dif)
+      }, error = function(e){
+        data_to_show <- dplyr::tibble()
+      })
+      shiny::showModal(
+        students_list_modal(data_to_show, title = "Students who have not submitted")
+      )
+    })
+
+
+
+
+    ####### End Modals #######
+
+
+
     ####### Updates #######
     shiny::observeEvent(quiz_processed(), {
       bs4Dash::updateBox("box_dataset", action = "restore")
@@ -213,7 +260,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     ####### Render #######
 
-    output$infobox_1 <- bs4Dash::renderbs4InfoBox({
+    output$valuebox_1 <- bs4Dash::renderbs4ValueBox({
       val <- 0
       tryCatch({
         val <- n_roster()
@@ -221,16 +268,23 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-        bs4Dash::bs4InfoBox(
-          title = "Students in roster",
-          value = shiny::tags$h3(val),
-          icon = shiny::icon("users-rectangle", lib = "font-awesome"),
-          fill = TRUE,
-          color = "gray"
-        )
+      bs4Dash::bs4ValueBox(
+        subtitle = "Students in roster",
+        value = shiny::tags$h3(val),
+        icon = shiny::icon("user-rectangle", lib = "font-awesome"),
+        footer = shiny::actionLink(
+          ns("open_modal_roster"),
+          shiny::tagList(
+            shiny::icon("info-circle", lib = "font-awesome", style="color:#ffffff"),
+            shiny::HTML('<span style="color:#ffffff">Who are they?</span>')
+          )
+        ),
+        elevation = 2,
+        color = "gray"
+      )
     })
 
-    output$infobox_2 <- bs4Dash::renderbs4ValueBox({
+    output$valuebox_2 <- bs4Dash::renderbs4ValueBox({
       val <- 0
       tryCatch({
         val <- n_responses()
@@ -238,22 +292,26 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-        val<- bs4Dash::bs4ValueBox(
+        bs4Dash::bs4ValueBox(
           subtitle = "Responses",
           value = shiny::tags$h3(val),
           icon = shiny::icon("user-check", lib = "font-awesome"),
           #fill = TRUE,
           #footer = "footes",
-          footer = shiny::tagList({
-            shiny::actionLink(ns("goLink"), shiny::HTML('<span style="color:#ffffff">More info ++ </span>'))
-            }),
+          footer = shiny::actionLink(
+            ns("open_modal_responses"),
+            shiny::tagList(
+              shiny::icon("info-circle", lib = "font-awesome", style="color:#ffffff"),
+              shiny::HTML('<span style="color:#ffffff">Who are they?</span>')
+            )
+          ),
           elevation = 2,
           color = "success"
         )
 
     })
 
-    output$infobox_3 <- bs4Dash::renderbs4InfoBox({
+    output$valuebox_3 <- bs4Dash::renderbs4ValueBox({
       val <- 0
       tryCatch({
         val <- max(0, n_roster() - n_responses())
@@ -261,13 +319,20 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-        bs4Dash::bs4InfoBox(
-          title = "Left to answer",
-          value = shiny::tags$h3(val),
-          icon = shiny::icon("user-minus", lib = "font-awesome"),
-          fill = TRUE,
-          color = "danger"
-        )
+      bs4Dash::bs4ValueBox(
+        subtitle = "Left to answer",
+        value = shiny::tags$h3(val),
+        icon = shiny::icon("user-minus", lib = "font-awesome"),
+        footer = shiny::actionLink(
+          ns("open_modal_left"),
+          shiny::tagList(
+            shiny::icon("info-circle", lib = "font-awesome", style="color:#ffffff"),
+            shiny::HTML('<span style="color:#ffffff">Who are they?</span>')
+          )
+        ),
+        elevation = 2,
+        color = "danger"
+      )
     })
 
 
