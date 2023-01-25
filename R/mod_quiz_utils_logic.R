@@ -87,3 +87,37 @@ get_questions_from_quiz <- function(quiz) {
                                paste0("\\b", toupper(QUESTIONS_TO_TAKE_OUT), "\\b", collapse = "|"))]
   return(questions_temp)
 }
+
+#' Modal of list of students
+#'
+#' @description Get list of students of `dataframe`
+#'
+#' @param dataframe A tibble with one column
+#' @param title The title for the modal. Default is "Students"
+#'
+#' @return A `shiny::Modal`
+#' @noRd
+
+students_list_modal <- function(dataframe, title = "Students"){
+  shiny::modalDialog(
+    title = title,
+    DT::datatable(
+      dataframe,
+      colnames = rep("", ncol(dataframe)),
+      rownames = FALSE,
+      style = "bootstrap4",
+      filter = "top",
+      extensions = "Scroller",
+      selection = "none",
+      options = list(
+        pageLength = 200,
+        dom = "t",
+        ordering = FALSE,
+        scrollY = 450
+      )
+    ),
+    easyClose = TRUE,
+    fade = FALSE,
+    footer = NULL
+  )
+}
