@@ -202,7 +202,10 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       tryCatch({
         dif <- dplyr::setdiff(main_inputs$roster()[["standardized_name"]],
                               quiz_processed()[[id_colname()]])
-        data_to_show <- dplyr::tibble("standardized_name" = dif)
+        data_to_show <- main_inputs$roster() |>
+          dplyr::filter(standardized_name %in% dif) |>
+          dplyr::select(standardized_name, teachly)
+        #data_to_show <- dplyr::tibble("standardized_name" = dif)
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })

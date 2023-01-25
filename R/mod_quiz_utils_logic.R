@@ -99,11 +99,18 @@ get_questions_from_quiz <- function(quiz) {
 #' @noRd
 
 students_list_modal <- function(dataframe, title = "Students"){
+  # Change colnames
+  colnames_to_show <- c("Name", "Teachly score")
+
+  # Teachly colors
+  brks <- seq(0, 1, 0.1)
+  clrs <-
+    colorRampPalette(c("#dc3545", "#ffc107", "#28a745"))(length(brks) + 1)
   shiny::modalDialog(
     title = title,
     DT::datatable(
       dataframe,
-      colnames = rep("", ncol(dataframe)),
+      colnames = colnames_to_show[1:ncol(dataframe)],
       rownames = FALSE,
       style = "bootstrap4",
       filter = "top",
@@ -112,10 +119,21 @@ students_list_modal <- function(dataframe, title = "Students"){
       options = list(
         pageLength = 200,
         dom = "t",
-        ordering = FALSE,
+        #ordering = FALSE,
         scrollY = 450
       )
-    ),
+    ) |>
+      #If there is teachly in colnames
+      (\(.) {
+        if ("teachly" %in% colnames(dataframe))
+        {
+          . |>
+            DT::formatStyle(c("teachly"),
+                            backgroundColor = DT::styleInterval(brks, clrs))
+        } else{
+          .
+        }
+      })(),
     easyClose = TRUE,
     fade = FALSE,
     footer = NULL
