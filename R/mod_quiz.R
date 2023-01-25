@@ -53,7 +53,7 @@ mod_quiz_ui <- function(id) {
                             shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_1"), width=NULL), proxy.height = 80)),
 
             bs4Dash::column(width = 4,
-                            shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_2"), width=NULL), proxy.height = 80)),
+                            shinycssloaders::withSpinner(bs4Dash::bs4ValueBoxOutput(ns("infobox_2"), width=NULL), proxy.height = 80)),
             bs4Dash::column(width = 4,
                             shinycssloaders::withSpinner(bs4Dash::bs4InfoBoxOutput(ns("infobox_3"), width=NULL), proxy.height = 80))
           ),
@@ -223,14 +223,14 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       })
         bs4Dash::bs4InfoBox(
           title = "Students in roster",
-          value = val,
+          value = shiny::tags$h3(val),
           icon = shiny::icon("users-rectangle", lib = "font-awesome"),
           fill = TRUE,
           color = "gray"
         )
     })
 
-    output$infobox_2 <- bs4Dash::renderbs4InfoBox({
+    output$infobox_2 <- bs4Dash::renderbs4ValueBox({
       val <- 0
       tryCatch({
         val <- n_responses()
@@ -238,14 +238,19 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
-
-        bs4Dash::bs4InfoBox(
-          title = "Responses",
-          value = val,
+        val<- bs4Dash::bs4ValueBox(
+          subtitle = "Responses",
+          value = shiny::tags$h3(val),
           icon = shiny::icon("user-check", lib = "font-awesome"),
-          fill = TRUE,
+          #fill = TRUE,
+          #footer = "footes",
+          footer = shiny::tagList({
+            shiny::actionLink(ns("goLink"), shiny::HTML('<span style="color:#ffffff">More info</span>'))
+            }),
+          elevation = 2,
           color = "success"
         )
+
     })
 
     output$infobox_3 <- bs4Dash::renderbs4InfoBox({
@@ -258,7 +263,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       })
         bs4Dash::bs4InfoBox(
           title = "Left to answer",
-          value = val,
+          value = shiny::tags$h3(val),
           icon = shiny::icon("user-minus", lib = "font-awesome"),
           fill = TRUE,
           color = "danger"
@@ -287,17 +292,14 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       shiny::tagList(fluidRow(
         column(
           width = 12,
-          "Submission Rate",
-            bs4Dash::bs4ProgressBar(
-              min(pct * 100, 100),
-              min = 0,
-              max = 100,
-              vertical = FALSE,
+            shinyWidgets::progressBar(
+              title = "Submission Rate",
+              id = ns("progress_bar"),
+              value = n_responses(),
+              total = n_roster(),
+              display_pct = TRUE,
               striped = FALSE,
-              animated = TRUE,
-              status = status,
-              size = NULL,
-              label = paste0(round(pct * 100, 1), "%")
+              status = status
             )
         )
       ))

@@ -15,7 +15,8 @@ app_server <- function(input, output, session) {
   output$user_panel <- renderUser({
     dashboardUser(
       name = stringr::str_replace(session$userData$user()$email, "@.*", ""),
-      image = "https://adminlte.io/themes/AdminLTE/dist/img/user2-160x160.jpg",
+      image = "https://www.hks.harvard.edu/sites/default/files/styles/employee_grayscale/public/bio_images/7008-1661999445.jpg",
+      #image = "https://adminlte.io/themes/AdminLTE/dist/img/user2-160x160.jpg",
       title = session$userData$user()$email,
       subtitle = if (session$userData$user()$is_admin) "Admin" else "User",
       # footer = p("The footer", class = "text-center"),
