@@ -245,7 +245,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           #fill = TRUE,
           #footer = "footes",
           footer = shiny::tagList({
-            shiny::actionLink(ns("goLink"), shiny::HTML('<span style="color:#ffffff">Moe inf ++ </span>'))
+            shiny::actionLink(ns("goLink"), shiny::HTML('<span style="color:#ffffff">Moe nf ++ </span>'))
             }),
           elevation = 2,
           color = "success"
