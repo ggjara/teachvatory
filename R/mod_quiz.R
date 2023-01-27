@@ -169,35 +169,18 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       nrows
     })
 
-    ####### End Reactive Values #######
-
-    ####### Modals #######
-
-    shiny::observeEvent(input$open_modal_responses, {
+    modal_responses_data <- reactive({
       data_to_show <- dplyr::tibble()
       tryCatch({
         data_to_show <- quiz_processed()[id_colname()]
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })
-      shiny::showModal(
-        students_list_modal(data_to_show, title = "Students who have submitted the quiz")
-      )
+      students_list_modal(data_to_show,
+                          title = "Students who have submitted the quiz")
     })
 
-    shiny::observeEvent(input$open_modal_roster, {
-      data_to_show <- dplyr::tibble()
-      tryCatch({
-        data_to_show <- main_inputs$roster()["standardized_name"]
-      }, error = function(e){
-        data_to_show <- dplyr::tibble()
-      })
-      shiny::showModal(
-        students_list_modal(data_to_show, title = "Students in roster")
-      )
-    })
-
-    shiny::observeEvent(input$open_modal_left, {
+    modal_left_data <- reactive({
       data_to_show <- dplyr::tibble()
       tryCatch({
         dif <- dplyr::setdiff(main_inputs$roster()[["standardized_name"]],
@@ -209,8 +192,39 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })
+      students_list_modal(data_to_show,
+                          title = "Students who have not submitted")
+    })
+
+    modal_roster_data <- reactive({
+      data_to_show <- dplyr::tibble()
+      tryCatch({
+        data_to_show <- main_inputs$roster()["standardized_name"]
+      }, error = function(e){
+        data_to_show <- dplyr::tibble()
+      })
+      students_list_modal(data_to_show,
+                          title = "Students in roster")
+    })
+    ####### End Reactive Values #######
+
+    ####### Modals #######
+
+    shiny::observeEvent(input$open_modal_responses, {
       shiny::showModal(
-        students_list_modal(data_to_show, title = "Students who have not submitted")
+        modal_responses_data()
+      )
+    })
+
+    shiny::observeEvent(input$open_modal_roster, {
+      shiny::showModal(
+        modal_roster_data()
+      )
+    })
+
+    shiny::observeEvent(input$open_modal_left, {
+      shiny::showModal(
+        modal_left_data()
       )
     })
 
@@ -274,12 +288,12 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       bs4Dash::bs4ValueBox(
         subtitle = "Students in roster",
         value = shiny::tags$h3(val),
-        icon = shiny::icon("user-rectangle", lib = "font-awesome"),
+        icon = shiny::icon("users", lib = "font-awesome"),
         footer = shiny::actionLink(
           ns("open_modal_roster"),
           shiny::tagList(
-            shiny::icon("info-circle", lib = "font-awesome", style="color:#ffffff"),
-            shiny::HTML('<span style="color:#ffffff">Who are they?</span>')
+            shiny::HTML('<span style="color:#ffffff">Who are they?</span>'),
+            shiny::icon("circle-arrow-right", lib = "font-awesome", style="color:#ffffff")
           )
         ),
         elevation = 2,
@@ -304,8 +318,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           footer = shiny::actionLink(
             ns("open_modal_responses"),
             shiny::tagList(
-              shiny::icon("info-circle", lib = "font-awesome", style="color:#ffffff"),
-              shiny::HTML('<span style="color:#ffffff">Who are they?</span>')
+              shiny::HTML('<span style="color:#ffffff">Who are they?</span>'),
+              shiny::icon("circle-arrow-right", lib = "font-awesome", style="color:#ffffff")
             )
           ),
           elevation = 2,
@@ -329,8 +343,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         footer = shiny::actionLink(
           ns("open_modal_left"),
           shiny::tagList(
-            shiny::icon("info-circle", lib = "font-awesome", style="color:#ffffff"),
-            shiny::HTML('<span style="color:#ffffff">Who are they?</span>')
+            shiny::HTML('<span style="color:#ffffff">Who are they?</span>'),
+            shiny::icon("circle-arrow-right", lib = "font-awesome", style="color:#ffffff")
           )
         ),
         elevation = 2,

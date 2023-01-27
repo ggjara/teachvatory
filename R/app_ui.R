@@ -119,7 +119,7 @@ app_ui <- function(request) {
         )
       ),
       footer = bs4Dash::dashboardFooter(
-        left = "Created by Marco, Dan, & Gonzalo",
+        left = "Created by Dan, Marco, Tyler, & Gonzalo",
         right = "2022"
       ),
       body = bs4Dash::dashboardBody(
