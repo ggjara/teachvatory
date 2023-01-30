@@ -1,6 +1,3 @@
-
-<!-- README.md is generated from README.Rmd. Please edit that file -->
-
 # teachvatory
 
 <!-- badges: start -->
@@ -13,28 +10,25 @@ The goal of teachvatory is to provide an easy visualization of students’
 performance and quizzes’ answers.
 
 ## Installation
----
 
-- Clone Repo
+- Clone respository branch `main`
 - Copy `.secrets/` and `.Renviron` into the app’s main directory (you will need to ask the admin for these files)
 - Install packages listed in `DESCRIPTION`
 
 ## Run Locally
----
 
-Once you have all the `.secrets/` to access Google Drive and Google
-Sheets through R, the `.Renviron` file, and all the depencies installed:
 - Run `dev/run_dev.R` to launch the server
 
 ## Editing app using GitHub workflow
----
-1) Get GitHub branch name of the issue you want to solve (See options in [Linear](https://linear.app).
+
+1) Get GitHub branch name of the issue you want to solve (See options in [Linear](https://linear.app))
 2) **Checkout** Standing on the app's directory, write on  terminal:  
 `git checkout -b [branch-name]`  
 The command `-b` allows you to create and move to the branch in one command.
 3) Make all the changes you need to do
 4) **Commit your changes:** On the terminal write:  
 `git commit -m "[A message to describe your change]"`
+    * You can make as many commits as you want. A good approach would be to make a commit for every self-contained update.
 5) **Push your changes:**  On the terminal write:  
 `git push origin [branch-name]`
 6) Go to the [GitHub repository](https://github.com/ggjara/teachvatory) and make a `pull request` from your branch `[branch-name]` to `main`.
@@ -42,7 +36,7 @@ The command `-b` allows you to create and move to the branch in one command.
 8) Once the branch is merged into `main` you can delete the branch remotely and locally.
 
 ## Publishing app on shinyapps.io
----
+
 1) Be sure you are on the latest update of the `main` branch.
     * To update to the lastest update write on terminal:   
     `git pull origin main`
@@ -55,7 +49,7 @@ The command `-b` allows you to create and move to the branch in one command.
 
 
 ## Others
----
+
 - You can access the terminal through any terminal shell or from [RStudio IDE](https://posit.co)
 - You can interact with Git through the terminal (as described above) or through [GitHub Desktop](https://desktop.github.com) (which I highly recommend it)
 
