@@ -136,17 +136,19 @@ mod_metrics_server <-
       quizzes <- shiny::eventReactive(main_inputs$masterquiz_md(), {
         tryCatch({
           quizzes_temp <- main_inputs$masterquiz_md()[["sheets"]]$name
-          quizzes_temp <-
-            quizzes_temp[!(
-              toupper(quizzes_temp) %in% c(
-                "ROSTER",
-                "ANSWER KEY",
-                "SETTINGS",
-                "STUDENT DB",
-                "STUDENT DB-TEST"
-              )
-            )]
-          quizzes_temp <- quizzes_temp[grepl("[0-9]", quizzes_temp)]
+
+          # Ideally we should delete the next two filters
+          # quizzes_temp <-
+          #   quizzes_temp[!(
+          #     toupper(quizzes_temp) %in% c(
+          #       "ROSTER",
+          #       "ANSWER KEY",
+          #       "SETTINGS",
+          #       "STUDENT DB",
+          #       "STUDENT DB-TEST"
+          #     )
+          #   )]
+          # quizzes_temp <- quizzes_temp[grepl("[0-9]", quizzes_temp)]
           quizzes_temp
         },
         error = function(e) {

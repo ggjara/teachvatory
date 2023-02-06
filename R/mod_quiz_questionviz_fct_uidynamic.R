@@ -13,7 +13,20 @@ get_quizviz_dynamic_ui <- function(quizviz_type, ns) {
         "Correct Answer",
         choices = c(""),
         selected = NULL
+      ),
+      shiny::checkboxInput(
+        ns("quizviz_arrange_by_frequency"),
+        "Order by frequency?",
+        value = FALSE
       )
+    ),
+    "Multiple Choice (multiple)" = shiny::tagList(
+      shiny::selectInput(
+        ns("probando"),
+        "Como estás?",
+        choices = c("Bien", "Mal", "Mas o menos"),
+        selected = c("Mal")
+      ),
     )
   )
 }

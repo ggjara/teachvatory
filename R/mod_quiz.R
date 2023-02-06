@@ -450,7 +450,18 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         quiz_processed() %>%
           dplyr::select(cols_toselect) %>%
           dplyr::rename(!!cols_toshow[3] := .data[[input$filter_crosstab1]],
-                        !!cols_toshow[4] := .data[[input$filter_crosstab2]]),
+                        !!cols_toshow[4] := .data[[input$filter_crosstab2]]) |>
+          data.table::setnames(
+            old = c(
+              "Your Name",
+              "teachly"
+            ),
+            new = c(
+              "Student Name",
+              "Teachly"
+            ),
+            skip_absent = TRUE
+          ),
         escape = FALSE,
         rownames = FALSE,
         style = "bootstrap4",
@@ -463,7 +474,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           buttons = c('copy', 'csv', 'excel')
         )
       ) %>%
-        DT::formatStyle(c("teachly"),
+        DT::formatStyle(c("Teachly"),
                         backgroundColor = DT::styleInterval(brks, clrs))
     })
     ####### End Render #######

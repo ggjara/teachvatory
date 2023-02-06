@@ -1,0 +1,14 @@
+installation
+understanding-what-is-a-github-repository
+cloning-teachvatory-repository
+installing-.secrets-and-.renviron-variables
+installing-packages
+the-easy-way
+the-long-way
+app-structure
+edit-app
+deploy-app
+recommendations
+teachvatory
+publishing-app-on-shinyapps.io
+others
