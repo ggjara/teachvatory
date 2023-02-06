@@ -1,5 +1,7 @@
 #' Barplot for multiple choice question - single answer
-chart_multiplechoise_single <- function(quiz, question, correct_answer = "") {
+chart_multiplechoise_single <- function(quiz, question,
+                                        correct_answer = "",
+                                        arrange_by_frequency = TRUE) {
   chart <- quiz %>%
     mutate(!!question := as.character(.data[[question]])) %>%
     mutate(!!question := case_when(
@@ -11,8 +13,12 @@ chart_multiplechoise_single <- function(quiz, question, correct_answer = "") {
     ungroup() %>%
     mutate(correct = case_when(
       .data[[question]] == correct_answer ~ "Correct",
-      TRUE ~ "Incorrect"))  %>%
-    arrange(desc(n))
+      TRUE ~ "Incorrect"))
+
+  if(arrange_by_frequency){
+    chart <- chart %>%
+      arrange(desc(n))
+  }
 
   chart <- chart %>%
     mutate(!!question := factor(.data[[question]], levels = unique(chart[[question]]))) %>%

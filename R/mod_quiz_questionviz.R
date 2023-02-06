@@ -120,9 +120,12 @@ mod_quiz_questionviz_server <- function(id, stringAsFactors = FALSE, main_inputs
       #Render chart depending on quizviz_type
       switch(input$quizviz_type,
         "Multiple Choice (single)" = chart_multiplechoise_single(
-          quiz_processed(),
-          input$quizviz_question,
-          input$quizviz_correctanswer
+          quiz = quiz_processed(),
+          question = input$quizviz_question,
+          correct_answer = input$quizviz_correctanswer,
+          arrange_by_frequency = input$quizviz_arrange_by_frequency
+
+
         ),
         "Multiple Choice (multiple)" = chart_multiplechoise_multiple(
           quiz_processed(),
