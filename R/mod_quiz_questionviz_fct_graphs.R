@@ -59,3 +59,29 @@ chart_multiplechoise_multiple <- function(quiz, question) {
     hc_subtitle(text = "Grouped by 12 hours. The horizontal labels show the floor hour.") %>%
     hc_add_theme(hc_theme_smpl())
 }
+
+#' Histogram for prediction questions
+chart_prediction <- function(quiz, question,
+                                        correct_answer = NA,
+                                        arrange_by_frequency = TRUE) {
+
+  if (!is.na(correct_answer)) {
+    quiz %>%
+      pull(question) %>%
+      unlist() %>%
+      as.numeric() %>%
+      hchart() %>%
+      hc_xAxis(plotLines = list(
+                 list(color = "#FF5733",
+                      dashStyle = "Solid",
+                      width = 3,
+                      value = correct_answer, zIndex = 10)))
+  } else {
+    quiz %>%
+      pull(question) %>%
+      unlist() %>%
+      as.numeric() %>%
+      hchart()
+  }
+
+}
