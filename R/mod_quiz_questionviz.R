@@ -84,7 +84,8 @@ mod_quiz_questionviz_server <- function(id, stringAsFactors = FALSE, main_inputs
         choices = c(
           "",
           "Multiple Choice (single)",
-          "Multiple Choice (multiple)"
+          "Multiple Choice (multiple)",
+          "Prediction"
         ),
         selected = ""
       )
@@ -124,12 +125,16 @@ mod_quiz_questionviz_server <- function(id, stringAsFactors = FALSE, main_inputs
           question = input$quizviz_question,
           correct_answer = input$quizviz_correctanswer,
           arrange_by_frequency = input$quizviz_arrange_by_frequency
-
-
         ),
         "Multiple Choice (multiple)" = chart_multiplechoise_multiple(
           quiz_processed(),
           input$quizviz_question
+        ),
+        "Prediction" = chart_prediction(
+          quiz = quiz_processed(),
+          question = input$quizviz_question,
+          correct_answer = input$quizviz_correctanswer,
+          arrange_by_frequency = input$quizviz_arrange_by_frequency
         ),
       )
       }, error = function(e){

@@ -26,7 +26,19 @@ get_quizviz_dynamic_ui <- function(quizviz_type, ns) {
         "Como estás?",
         choices = c("Bien", "Mal", "Mas o menos"),
         selected = c("Mal")
+      )
+    ),
+    "Prediction" = shiny::tagList(
+      shiny::selectInput(
+        ns("quizviz_question"),
+        "Question",
+        choices = c(""),
+        selected = NULL
       ),
+      shiny::textInput(
+        ns("quizviz_correctanswer"),
+        label = "Enter a reference point (if one exists)"
+      )
     )
   )
 }
