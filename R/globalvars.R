@@ -22,3 +22,7 @@ NAME_ALTERNATIVE_FIELD_QUIZ <- "If your name is not listed"
 
 # Names to remove from quizzes name
 NAMES_TO_REMOVE_FROM_QUIZ <- c("Student, Test", "Levy, Dan", "Dan Levy", "Dan, Levy", "Student Test", "Test, Student")
+
+
+# Initial Date
+INITIAL_DATE_DEFAULT = as.Date("2022-01-01")

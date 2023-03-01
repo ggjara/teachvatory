@@ -34,6 +34,13 @@ mod_quiz_ui <- function(id) {
           label = "Load Quiz",
           status = "primary"
         ),
+        shiny::tags$br(),
+        shiny::tags$br(),
+        shiny::dateInput(
+          inputId = ns("initial_date"),
+          label = "Analysis Start Date",
+          value = as.Date(INITIAL_DATE_DEFAULT)
+        ),
         shiny::uiOutput(ns("crosstab_ui"))
       ),
       bs4Dash::tabBox(
@@ -145,7 +152,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       filter_quiz(
         quiz = quiz(),
         col_to_match =id_colname(),
-        col_alternative = id_colname_alternative())
+        col_alternative = id_colname_alternative(),
+        initial_date = input$initial_date)
     })
 
 

@@ -35,6 +35,11 @@ mod_metrics_ui <- function(id) {
             inputId = ns("load_metrics"),
             label = "Load quizzes",
             status = "primary"
+          ),
+          shiny::dateInput(
+            inputId = ns("initial_date"),
+            label = "Analysis Start Date",
+            value = as.Date(INITIAL_DATE_DEFAULT)
           )
         ),
         bs4Dash::column(
@@ -176,7 +181,8 @@ mod_metrics_server <-
         create_metrics_dataframe(
           roster = main_inputs$roster(),
           masterquiz_md = main_inputs$masterquiz_md(),
-          quizzes = input$filter_quiz
+          quizzes = input$filter_quiz,
+          initial_date = input$intial_date
         )
       })
 
