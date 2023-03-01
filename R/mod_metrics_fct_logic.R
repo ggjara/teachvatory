@@ -1,11 +1,14 @@
 create_metrics_dataframe <-
-  function(roster, masterquiz_md, quizzes) {
+  function(roster, masterquiz_md, quizzes, initial_date = INITIAL_DATE_DEFAULT) {
     print(quizzes)
     final_quizzes <- c()
     for (quiz in quizzes) {
       temp <- googlesheets4::read_sheet(masterquiz_md, sheet = quiz)
       # Filter Quiz - Function at mod_quiz_fct_logic.R
-      temp <- filter_quiz(temp)
+      temp <- filter_quiz(quiz = temp,
+                          col_to_match = get_idcolname(temp),
+                          col_alternative = get_idcolname_alternative(temp),
+                          initial_date = initial_date)
 
       if (nrow(temp) > 0) {
         name_col <- get_idcolname(temp)

@@ -66,8 +66,13 @@ get_idcolname_alternative <- function(quiz) {
 #' @noRd
 #' @import stringr dplyr
 #'
-filter_quiz <- function(quiz, col_to_match, col_alternative){
+filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INITIAL_DATE_DEFAULT){
   quiz_temp <- quiz
+
+  if("Timestamp" %in% colnames(quiz_temp)){
+    quiz_temp <- quiz_temp |>
+      filter(Timestamp>as.Date(initial_date))
+  }
 
   if(col_to_match=="" | is.na(col_to_match)){
     return(quiz_temp)
