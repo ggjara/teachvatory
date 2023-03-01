@@ -139,6 +139,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
                                 sheet = input$filter_quiz)
     })
 
+    # Process quiz: (1) Replace [Your Name] with [If Your Name...], (2) Delete NAs, (3) Delete repeated
     quiz_filtered <- shiny::reactive({
       shiny::req(quiz())
       filter_quiz(
@@ -148,10 +149,13 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     })
 
 
+    # Get colname of "Your Name" input. If doesn't exist, return ""
     id_colname <- shiny::reactive({
       get_idcolname(quiz())
     })
 
+    # Get colname of "If your name is not listed..." input.
+    # If doesn't exist, return ""
     id_colname_alternative <- shiny::reactive({
       get_idcolname_alternative(quiz())
     })
@@ -185,7 +189,12 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     modal_responses_data <- reactive({
       data_to_show <- dplyr::tibble()
       tryCatch({
-        data_to_show <- quiz_processed()[id_colname()]
+        if(id_colname()=="" | is.na(id_colname())){
+          data_to_show <- dplyr::tibble()
+        }
+        else{
+          data_to_show <- quiz_processed()[id_colname()]
+        }
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })
@@ -196,12 +205,17 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     modal_left_data <- reactive({
       data_to_show <- dplyr::tibble()
       tryCatch({
+        if(id_colname()=="" | is.na(id_colname())){
+          data_to_show <- main_inputs$roster()[["standardized_name"]] |>
+            dplyr::select(standardized_name, teachly)
+        }
+        else{
         dif <- dplyr::setdiff(main_inputs$roster()[["standardized_name"]],
                               quiz_processed()[[id_colname()]])
         data_to_show <- main_inputs$roster() |>
           dplyr::filter(standardized_name %in% dif) |>
           dplyr::select(standardized_name, teachly)
-        #data_to_show <- dplyr::tibble("standardized_name" = dif)
+        }
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })
@@ -240,9 +254,6 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         modal_left_data()
       )
     })
-
-
-
 
     ####### End Modals #######
 
