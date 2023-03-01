@@ -22,8 +22,6 @@ get_idcolname <- function(quiz) {
     col_to_match <- cols[1]
   } else if (stringr::str_detect(toupper(cols[2]), "NAME")) {
     col_to_match <- cols[2]
-  } else if (length(cols) >= 3) {
-    col_to_match <- cols[3]
   } else {
     col_to_match <- ""
   }
@@ -73,6 +71,10 @@ get_idcolname_alternative <- function(quiz) {
 join_quiz_roster <- function(quiz, roster, col_to_match) {
   if (is.null(quiz)) {
     return(NULL)
+  }
+
+  if(col_to_match=="" | is.null(col_to_match)){
+    return(quiz)
   }
 
   #Re format

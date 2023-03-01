@@ -143,6 +143,10 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
       quiz_temp <- quiz()
 
+      if(id_colname()=="" | is.na(id_colname())){
+        return(quiz_temp)
+      }
+
       # Fill "Your Name" with "If your name is not listed above" when "Your Name is empty"
       if(id_colname_alternative()!=""){
         quiz_temp <- quiz_temp|>
@@ -168,8 +172,9 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         dplyr::filter(order == max(order)) |>
         dplyr::ungroup()
 
-
+      quiz_temp
     })
+
 
     id_colname <- shiny::reactive({
       get_idcolname(quiz())
@@ -191,7 +196,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     n_responses <- shiny::reactive({
       nrows <- nrow(quiz_processed())
-      if (is.null(nrows)) {
+      if (is.null(nrows) | id_colname()=="" | is.na(id_colname())) {
         nrows <- 0
       }
       nrows
@@ -228,7 +233,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })
-      students_list_modal(paste0(data_to_show,"--"),
+      students_list_modal(data_to_show,
                           title = "Students who have not submitted")
     })
 
@@ -372,6 +377,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       error = function(e) {
 
       })
+
       bs4Dash::bs4ValueBox(
         subtitle = "Left to answer",
         value = shiny::tags$h3(val),
@@ -466,36 +472,33 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       clrs <-
         colorRampPalette(c("#dc3545", "#ffc107", "#28a745"))(length(brks) + 1)
 
-      cols_toselect <- c(col_to_match,
-                         "teachly",
-                         input$filter_crosstab1,
-                         input$filter_crosstab2)
-      cols_toshow <- c(
-        col_to_match,
-        "teachly",
-        paste0(
+      if(col_to_match!="" && !is.na(col_to_match)){
+        cols_toselect <- unique(c(col_to_match,
+                           "teachly",
+                           input$filter_crosstab1,
+                           input$filter_crosstab2))
+        cols_toshow <- unique(c(
+          "Name",
+          "Teachly",
           stringr::str_sub(input$filter_crosstab1, end = 200),
-          "..."
-        ),
-        paste0(
-          stringr::str_sub(input$filter_crosstab2, end = 200),
-          "..."
+          stringr::str_sub(input$filter_crosstab2, end = 200))
         )
-      )
-      DT::datatable(
+      }
+      else{
+        cols_toselect <- unique(c(input$filter_crosstab1,
+                           input$filter_crosstab2))
+        cols_toshow <- unique(c(
+          stringr::str_sub(input$filter_crosstab1, end = 200),
+          stringr::str_sub(input$filter_crosstab2, end = 200))
+        )
+      }
+
+      dt <- DT::datatable(
         quiz_processed() %>%
           dplyr::select(cols_toselect) %>%
-          dplyr::rename(!!cols_toshow[3] := .data[[input$filter_crosstab1]],
-                        !!cols_toshow[4] := .data[[input$filter_crosstab2]]) |>
           data.table::setnames(
-            old = c(
-              "Your Name",
-              "teachly"
-            ),
-            new = c(
-              "Student Name",
-              "Teachly"
-            ),
+            old = cols_toselect,
+            new = cols_toshow,
             skip_absent = TRUE
           ),
         escape = FALSE,
@@ -509,9 +512,15 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           scrollX = TRUE,
           buttons = c('copy', 'csv', 'excel')
         )
-      ) %>%
-        DT::formatStyle(c("Teachly"),
-                        backgroundColor = DT::styleInterval(brks, clrs))
+      )
+      if("Teachly" %in% cols_toshow){
+        dt <- dt |>
+          DT::formatStyle(c("Teachly"),
+                          backgroundColor = DT::styleInterval(brks, clrs))
+      }
+
+      dt
+
     })
     ####### End Render #######
 
