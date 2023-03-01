@@ -16,3 +16,9 @@ QUESTIONS_TO_TAKE_OUT <- c(
 
 # Regexp of name field in quiz
 NAME_FIELD_QUIZ <- "Your Name"
+
+# Regexp of name field in quiz
+NAME_ALTERNATIVE_FIELD_QUIZ <- "If your name is not listed"
+
+# Names to remove from quizzes name
+NAMES_TO_REMOVE_FROM_QUIZ <- c("Student, Test", "Levy, Dan", "Dan Levy", "Dan, Levy", "Student Test")

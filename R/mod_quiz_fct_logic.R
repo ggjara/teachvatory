@@ -31,6 +31,35 @@ get_idcolname <- function(quiz) {
 }
 
 
+#' @title Get column name of ID field alternative when name is not listed
+#'
+#' @description Detect what is the name of the column variable that
+#' receives student name when not provided to the id_colname
+#'
+#' @param quiz A data frame.
+#'
+#' @return Column name as string or `""` if not found.
+#' @noRd
+#' @import stringr dplyr
+get_idcolname_alternative <- function(quiz) {
+  if (is.null(quiz) || length(colnames(quiz)) < 2)
+    return(NULL)
+
+  cols <- colnames(quiz)
+
+  test <-
+    cols[stringr::str_detect(toupper(cols), toupper(NAME_ALTERNATIVE_FIELD_QUIZ))][1]
+
+  if (!is.na(test)) {
+    col_to_match <- test
+  } else {
+    col_to_match <- ""
+  }
+  col_to_match
+}
+
+
+
 #' Join quiz responses with Roster
 #'
 #' @param quiz A data frame.

@@ -139,13 +139,49 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
                                 sheet = input$filter_quiz)
     })
 
+    quiz_filtered <- shiny::reactive({
+
+      quiz_temp <- quiz()
+
+      # Fill "Your Name" with "If your name is not listed above" when "Your Name is empty"
+      if(id_colname_alternative()!=""){
+        quiz_temp <- quiz_temp|>
+          dplyr::mutate(!!id_colname() := case_when(
+            is.na(.data[[id_colname()]]) ~ .data[[id_colname_alternative()]],
+            T ~ .data[[id_colname()]]
+          ))
+      }
+
+      # Filter NAMES_TO_REMOVE_FROM_QUIZ (`Student, Test`, `Dan Levy`, among others (see R/globalvars.R))
+      quiz_temp <- quiz_temp |>
+        dplyr::filter(!(toupper(.data[[id_colname()]]) %in%
+                          toupper(NAMES_TO_REMOVE_FROM_QUIZ)))
+
+      # Filter NAs
+      quiz_temp <- quiz_temp |>
+        dplyr::filter(!is.na(.data[[id_colname()]]))
+
+      # Keep one obseervation for student. Keep latest submission
+      quiz_temp <- quiz_temp |>
+        dplyr::mutate(order = seq.int(nrow(quiz_temp))) |>
+        dplyr::group_by(.data[[id_colname()]]) |>
+        dplyr::filter(order == max(order)) |>
+        dplyr::ungroup()
+
+
+    })
+
     id_colname <- shiny::reactive({
       get_idcolname(quiz())
     })
 
+    id_colname_alternative <- shiny::reactive({
+      get_idcolname_alternative(quiz())
+    })
+
     # Join quiz with Roster
     quiz_processed <- shiny::reactive({
-      join_quiz_roster(quiz(), main_inputs$roster(), id_colname())
+      join_quiz_roster(quiz_filtered(), main_inputs$roster(), id_colname())
     })
 
     # Get questions for select inputs
@@ -192,7 +228,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       }, error = function(e){
         data_to_show <- dplyr::tibble()
       })
-      students_list_modal(data_to_show,
+      students_list_modal(paste0(data_to_show,"--"),
                           title = "Students who have not submitted")
     })
 
