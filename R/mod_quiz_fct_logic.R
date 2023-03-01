@@ -57,6 +57,66 @@ get_idcolname_alternative <- function(quiz) {
 }
 
 
+#' Filter raw quiz
+#'
+#' @param quiz A data frame.
+#' @param col_to_match A string of the column name to match.
+#'
+#' @return A dataframe with the quiz filtered
+#' @noRd
+#' @import stringr dplyr
+#'
+filter_quiz <- function(quiz, col_to_match, col_alternative){
+  quiz_temp <- quiz
+
+  if(col_to_match=="" | is.na(col_to_match)){
+    return(quiz_temp)
+  }
+
+  # Fill "Your Name" with "If your name is not listed above" when "Your Name is empty"
+  if(col_alternative!=""){
+    tryCatch({
+      quiz_temp <- quiz_temp|>
+        dplyr::mutate(!!col_to_match:= case_when(
+          is.na(.data[[col_to_match]]) ~ .data[[col_alternative]],
+          T ~ .data[[col_to_match]]
+        ))
+    }, error=function(e){
+    })
+
+  }
+
+  # Filter NAMES_TO_REMOVE_FROM_QUIZ
+  # (`Student, Test`, `Dan Levy`, among others (see R/globalvars.R))
+  tryCatch({
+    quiz_temp <- quiz_temp |>
+      dplyr::filter(!(toupper(.data[[col_to_match]]) %in%
+                        toupper(NAMES_TO_REMOVE_FROM_QUIZ)))
+  }, error = function(e){
+  })
+
+
+  # Filter NAs
+  tryCatch({
+      quiz_temp <- quiz_temp |>
+        dplyr::filter(!is.na(.data[[col_to_match]]))
+    }, error = function(e){
+  })
+
+
+  # Keep one obseervation for student. Keep latest submission
+  tryCatch({
+    quiz_temp <- quiz_temp |>
+      dplyr::mutate(order = seq.int(nrow(quiz_temp))) |>
+      dplyr::group_by(.data[[col_to_match]]) |>
+      dplyr::filter(order == max(order)) |>
+      dplyr::ungroup()
+  }, error = function(e){
+  })
+
+  quiz_temp
+}
+
 
 #' Join quiz responses with Roster
 #'
@@ -83,7 +143,7 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
       dplyr::mutate(dplyr::across(c(col_to_match), as.character))
   }
   if (is.null(roster) || nrow(roster) == 0 ||
-        !all(c("standardized_name", "teachly") %in% colnames(roster))) {
+      !all(c("standardized_name", "teachly") %in% colnames(roster))) {
     quiz %>%
       dplyr::left_join(
         dplyr::tibble("standardized_name" = "XXX", "teachly" = 0) %>%
