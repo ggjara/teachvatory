@@ -138,7 +138,9 @@ get_roster <- function(course_directory,
       googlesheets4::read_sheet(metadata, sheet = filter_roster_sheet)
     roster_temp <- roster_temp %>%
       filter(!is.na(name_canvas) | !is.na(email_teachly)) %>%
+      #Filter Student Test
       filter(tolower(standardized_name) != "student, test") |>
+      #Filter invalids
       filter(!Invalid) %>%
       select(
         standardized_name,
@@ -148,7 +150,7 @@ get_roster <- function(course_directory,
         teachly_absences
       )
 
-    # Get only one observation per person. Keep first encounter
+    # Get only one observation per person. Keep first encounter in Roster.
     roster_temp <- roster_temp %>%
       dplyr::mutate(order = seq.int(nrow(roster_temp))) |>
       dplyr::group_by(standardized_name) |>
