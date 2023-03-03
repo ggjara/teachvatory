@@ -70,8 +70,12 @@ filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INIT
   quiz_temp <- quiz
 
   if("Timestamp" %in% colnames(quiz_temp)){
-    quiz_temp <- quiz_temp |>
-      filter(Timestamp>as.Date(initial_date))
+    tryCatch({
+      quiz_temp <- quiz_temp |>
+        dplyr::filter(Timestamp>=as.Date(initial_date))
+    }, error = function(e){
+
+    })
   }
 
   if(col_to_match=="" | is.na(col_to_match)){

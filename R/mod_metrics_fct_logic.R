@@ -4,6 +4,7 @@ create_metrics_dataframe <-
     final_quizzes <- c()
     for (quiz in quizzes) {
       temp <- googlesheets4::read_sheet(masterquiz_md, sheet = quiz)
+      print(initial_date)
       # Filter Quiz - Function at mod_quiz_fct_logic.R
       temp <- filter_quiz(quiz = temp,
                           col_to_match = get_idcolname(temp),
