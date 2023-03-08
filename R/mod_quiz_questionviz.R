@@ -66,11 +66,16 @@ mod_quiz_questionviz_server <- function(id, stringAsFactors = FALSE, main_inputs
           )) %>%
           group_by(.data[[input$quizviz_question]]) %>%
           summarize(n = n()) %>%
-          ungroup() %>%
-          arrange(desc(n)) %>%
+          ungroup()
+        if(input$quizviz_arrange_by_frequency){
+          answers_temp <- answers_temp |>
+            arrange(desc(n))
+        }
+
+        answers_temp <- answers_temp |>
           pull(.data[[input$quizviz_question]])
 
-        c("", answers_temp)
+        c("No correct answer", answers_temp)
       }, error= function(e){
         NULL
       })

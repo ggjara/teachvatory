@@ -26,3 +26,12 @@ NAMES_TO_REMOVE_FROM_QUIZ <- c("Student, Test", "Levy, Dan", "Dan Levy", "Dan, L
 
 # Initial Date
 INITIAL_DATE_DEFAULT = as.Date("2022-01-01")
+
+# Color palette
+COLORS <- c("#9E2A2B", "#429EA6", "#383D3B", "#F4F4F9", "#FCDE9C")
+
+COLOR_RED <- COLORS[1]
+COLOR_GREEN <- COLORS[2]
+COLOR_DEFAULT <- COLORS[3]
+COLOR_WHITE <- COLORS[4]
+COLOR_YELLOW <- COLORS[5]
