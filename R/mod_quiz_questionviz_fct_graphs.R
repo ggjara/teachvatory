@@ -10,27 +10,48 @@ chart_multiplechoise_single <- function(quiz, question,
     ))  %>%
     group_by(.data[[question]]) %>%
     summarize(n = n()) %>%
-    ungroup() %>%
-    mutate(correct = case_when(
-      .data[[question]] == correct_answer ~ "Correct",
-      TRUE ~ "Incorrect"))
+    ungroup() |>
+    mutate(correct = .data[[question]] == correct_answer) |>
+    mutate(n_correct = case_when(
+      correct ~ n,
+      TRUE ~ NA_integer_)) |>
+    mutate(n_incorrect = case_when(
+      !correct ~ n,
+      TRUE ~ NA_integer_
+    ))
 
   if(arrange_by_frequency){
     chart <- chart %>%
       arrange(desc(n))
   }
 
-  chart <- chart %>%
-    mutate(!!question := factor(.data[[question]], levels = unique(chart[[question]]))) %>%
-    mutate(correct = factor(correct, levels = c("Incorrect", "Correct")))
 
-  highchart() %>%
-    hc_xAxis(categories = chart[[question]]) %>%
-    hc_add_series(chart, "bar", name = "Responses", hcaes(
-      x = .data[[question]], y = n,
-      color = correct,
-    )) %>%
-    hc_legend(enabled = FALSE)
+  chart <- chart %>%
+    mutate(!!question := factor(.data[[question]], levels = unique(chart[[question]])))
+
+  question_title <- ifelse(nchar(question)>200,
+                           paste0(substr(question, 1, 200), "..."),
+                           question)
+  highchart(type = "chart") |>
+    hc_xAxis(categories = chart[[question]]) |>
+    (\(.) {
+      if (correct_answer=="No correct answer")
+      {
+        . |>
+          hc_add_series(type = 'bar', chart[['n']], color = COLOR_DEFAULT, name ="Responses")
+      } else{
+        . |>
+          hc_add_series(type = 'bar', chart[['n_correct']], color = COLOR_GREEN, name ="Correct") |>
+          hc_add_series(type = 'bar', chart[['n_incorrect']], color = COLOR_DEFAULT, name ="Incorrect")
+      }
+    })() |>
+    hc_plotOptions(series = list(stacking="normal", dataLabels=list(enabled=T))) |>
+    hc_legend(enabled = T) |>
+    hc_title(text=question_title) |>
+    hc_exporting(
+      enabled = TRUE, # always enabled
+      filename = paste0("viz_", substr(question, 1, 20))
+    )
 }
 
 #' Barplot for multiple choice question
