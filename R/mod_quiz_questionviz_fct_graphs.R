@@ -51,7 +51,8 @@ chart_multiplechoise_single <- function(quiz, question,
     hc_exporting(
       enabled = TRUE, # always enabled
       filename = paste0("viz_", substr(question, 1, 20))
-    )
+    ) |>
+    hc_add_theme(hc_theme_smpl())
 }
 
 #' Barplot for multiple choice question
