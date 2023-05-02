@@ -28,20 +28,17 @@ mod_quiz_ui <- function(id) {
                          `actions-box` = TRUE)
         ),
         "",
-        # Submit button
-        bs4Dash::actionButton(
-          inputId = ns("submit_filters"),
-          label = "Load Quiz",
-          status = "primary"
-        ),
-        shiny::tags$br(),
-        shiny::tags$br(),
         shiny::dateInput(
           inputId = ns("initial_date"),
           label = "Analysis Start Date",
           value = as.Date(INITIAL_DATE_DEFAULT)
         ),
-        shiny::uiOutput(ns("crosstab_ui"))
+        # Submit button
+        bs4Dash::actionButton(
+          inputId = ns("submit_filters"),
+          label = "Load Quiz",
+          status = "primary"
+        )
       ),
       bs4Dash::tabBox(
         id = ns("box_performance"),
@@ -66,13 +63,13 @@ mod_quiz_ui <- function(id) {
           ),
           shinycssloaders::withSpinner(uiOutput(ns("performance_box")), proxy.height = 56)
         ),
-        shiny::tabPanel(title = "Responses time",
-                          highcharter::highchartOutput(outputId = ns(
-                          "responses_time_graph"
-                        ))),
         shiny::tabPanel(
-          title = "Quiz Viz",
-          mod_quiz_questionviz_ui("quiz_questionviz_1")
+          title = "Multiple Choice",
+          mod_quiz_multipleChoiceSingle_ui("quiz_multipleChoiceSingle_1")
+        ),
+        shiny::tabPanel(
+          title = "Prediction",
+          mod_quiz_prediction_ui("quiz_prediction_1")
         )
       )
     ),
@@ -420,37 +417,37 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       ))
     })
 
-    output$responses_time_graph <- highcharter::renderHighchart({
-      shiny::req(quiz_processed())
-      shiny::validate(
-        shiny::need(
-          !is.null(quiz_processed()) &&
-            "Timestamp" %in% colnames(quiz_processed()),
-          message = "Quiz was not uploaded correctly. Check your inputs."
-        )
-      )
-
-      chart <- quiz_processed() %>%
-        group_by(Date = lubridate::floor_date(Timestamp, "4 hour")) %>%
-        summarize(n = n()) %>%
-        ungroup() %>%
-        arrange(Date) %>%
-        mutate(Date = substr(Date, 1, 16))
-
-      chart <- chart %>%
-        mutate(Date = factor(Date, labels = unique(chart$Date)),
-               serie = "Responses")
-
-      highchart() %>%
-        hc_xAxis(categories = chart$Date) %>%
-        hc_add_series(name = "Responses",
-                      data = chart$n,
-                      type = "column") %>%
-        hc_yAxis(title = list(text = "Responses"))  %>%
-        hc_title(text = "Responses time") %>%
-        hc_subtitle(text = "Grouped by 4 hours. The horizontal labels show the floor hour.") %>%
-        hc_add_theme(hc_theme_smpl())
-    })
+    # output$responses_time_graph <- highcharter::renderHighchart({
+    #   shiny::req(quiz_processed())
+    #   shiny::validate(
+    #     shiny::need(
+    #       !is.null(quiz_processed()) &&
+    #         "Timestamp" %in% colnames(quiz_processed()),
+    #       message = "Quiz was not uploaded correctly. Check your inputs."
+    #     )
+    #   )
+    #
+    #   chart <- quiz_processed() %>%
+    #     group_by(Date = lubridate::floor_date(Timestamp, "4 hour")) %>%
+    #     summarize(n = n()) %>%
+    #     ungroup() %>%
+    #     arrange(Date) %>%
+    #     mutate(Date = substr(Date, 1, 16))
+    #
+    #   chart <- chart %>%
+    #     mutate(Date = factor(Date, labels = unique(chart$Date)),
+    #            serie = "Responses")
+    #
+    #   highchart() %>%
+    #     hc_xAxis(categories = chart$Date) %>%
+    #     hc_add_series(name = "Responses",
+    #                   data = chart$n,
+    #                   type = "column") %>%
+    #     hc_yAxis(title = list(text = "Responses"))  %>%
+    #     hc_title(text = "Responses time") %>%
+    #     hc_subtitle(text = "Grouped by 4 hours. The horizontal labels show the floor hour.") %>%
+    #     hc_add_theme(hc_theme_smpl())
+    # })
 
     output$quiz_table <- DT::renderDT({
       shiny::req(quiz_processed())
