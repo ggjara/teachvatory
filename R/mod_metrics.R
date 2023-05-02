@@ -50,11 +50,12 @@ mod_metrics_ui <- function(id) {
             inputId = ns("teachly_columns"),
             label = "Teachly data to show",
             choices = c(
+              "Email" = "email_teachly",
               "Teachly score" = "teachly",
               "Number of comments" = "teachly_comments",
               "Number of absences" = "teachly_absences"
             ),
-            selected = c("teachly"),
+            selected = c("email_teachly","teachly"),
             multiple = TRUE,
             options = list(`actions-box` = TRUE)
           ),
