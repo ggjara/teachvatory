@@ -9,8 +9,9 @@
 #' @noRd
 #' @import stringr dplyr
 get_idcolname <- function(quiz) {
-  if (is.null(quiz) || length(colnames(quiz)) < 2)
+  if (is.null(quiz) || length(colnames(quiz)) < 2) {
     return(NULL)
+  }
 
   cols <- colnames(quiz)
 
@@ -40,8 +41,9 @@ get_idcolname <- function(quiz) {
 #' @noRd
 #' @import stringr dplyr
 get_idcolname_alternative <- function(quiz) {
-  if (is.null(quiz) || length(colnames(quiz)) < 2)
+  if (is.null(quiz) || length(colnames(quiz)) < 2) {
     return(NULL)
+  }
 
   cols <- colnames(quiz)
 
@@ -57,6 +59,22 @@ get_idcolname_alternative <- function(quiz) {
 }
 
 
+#' Helper function to attempt to convert to numeric
+#'
+#' @param x column
+#'
+#' @return A column with numeric values or character if conversion fails
+#' @noRd
+#'
+try_convert_numeric <- function(x) {
+  converted <- suppressWarnings(as.numeric(x))
+  if (anyNA(converted)) {
+    return(as.character(x)) # return as character if conversion fails
+  } else {
+    return(converted)
+  }
+}
+
 #' Filter raw quiz
 #'
 #' @param quiz A data frame.
@@ -66,62 +84,79 @@ get_idcolname_alternative <- function(quiz) {
 #' @noRd
 #' @import stringr dplyr
 #'
-filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INITIAL_DATE_DEFAULT){
+filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INITIAL_DATE_DEFAULT) {
   quiz_temp <- quiz
 
-  if("Timestamp" %in% colnames(quiz_temp)){
-    tryCatch({
-      quiz_temp <- quiz_temp |>
-        dplyr::filter(Timestamp>=as.Date(initial_date))
-    }, error = function(e){
+  if ("Timestamp" %in% colnames(quiz_temp)) {
+    tryCatch(
+      {
+        quiz_temp <- quiz_temp |>
+          dplyr::filter(Timestamp >= as.Date(initial_date))
+      },
+      error = function(e) {
 
-    })
+      }
+    )
   }
 
-  if(col_to_match=="" | is.na(col_to_match)){
+  if (col_to_match == "" | is.na(col_to_match)) {
     return(quiz_temp)
   }
 
   # Fill "Your Name" with "If your name is not listed above" when "Your Name is empty"
-  if(col_alternative!=""){
-    tryCatch({
-      quiz_temp <- quiz_temp|>
-        dplyr::mutate(!!col_to_match:= case_when(
-          is.na(.data[[col_to_match]]) ~ .data[[col_alternative]],
-          T ~ .data[[col_to_match]]
-        ))
-    }, error=function(e){
-    })
-
+  if (col_alternative != "") {
+    tryCatch(
+      {
+        quiz_temp <- quiz_temp |>
+          dplyr::mutate(!!col_to_match := case_when(
+            is.na(.data[[col_to_match]]) ~ .data[[col_alternative]],
+            T ~ .data[[col_to_match]]
+          ))
+      },
+      error = function(e) {
+      }
+    )
   }
 
   # Filter NAMES_TO_REMOVE_FROM_QUIZ
   # (`Student, Test`, `Dan Levy`, among others (see R/globalvars.R))
-  tryCatch({
-    quiz_temp <- quiz_temp |>
-      dplyr::filter(!(toupper(.data[[col_to_match]]) %in%
-                        toupper(NAMES_TO_REMOVE_FROM_QUIZ)))
-  }, error = function(e){
-  })
+  tryCatch(
+    {
+      quiz_temp <- quiz_temp |>
+        dplyr::filter(!(toupper(.data[[col_to_match]]) %in%
+          toupper(NAMES_TO_REMOVE_FROM_QUIZ)))
+    },
+    error = function(e) {
+    }
+  )
 
 
   # Filter NAs
-  tryCatch({
+  tryCatch(
+    {
       quiz_temp <- quiz_temp |>
         dplyr::filter(!is.na(.data[[col_to_match]]))
-    }, error = function(e){
-  })
+    },
+    error = function(e) {
+    }
+  )
 
 
   # Keep one obseervation for student. Keep latest submission
-  tryCatch({
-    quiz_temp <- quiz_temp |>
-      dplyr::mutate(order = seq.int(nrow(quiz_temp))) |>
-      dplyr::group_by(.data[[col_to_match]]) |>
-      dplyr::filter(order == max(order)) |>
-      dplyr::ungroup()
-  }, error = function(e){
-  })
+  tryCatch(
+    {
+      quiz_temp <- quiz_temp |>
+        dplyr::mutate(order = seq.int(nrow(quiz_temp))) |>
+        dplyr::group_by(.data[[col_to_match]]) |>
+        dplyr::filter(order == max(order)) |>
+        dplyr::ungroup()
+    },
+    error = function(e) {
+    }
+  )
+
+  # Use lapply to convert to numeric or to string to each column of your data frame
+  quiz_temp[] <- lapply(quiz_temp, try_convert_numeric)
 
   quiz_temp
 }
@@ -142,17 +177,17 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
     return(NULL)
   }
 
-  if(col_to_match=="" | is.null(col_to_match)){
+  if (col_to_match == "" | is.null(col_to_match)) {
     return(quiz)
   }
 
-  #Re format
+  # Re format
   if (typeof(quiz %>% select(c(col_to_match)) %>% pull()) == "logical") {
     quiz <- quiz %>%
       dplyr::mutate(dplyr::across(c(col_to_match), as.character))
   }
   if (is.null(roster) || nrow(roster) == 0 ||
-      !all(c("standardized_name", "teachly") %in% colnames(roster))) {
+    !all(c("standardized_name", "teachly") %in% colnames(roster))) {
     quiz %>%
       dplyr::left_join(
         dplyr::tibble("standardized_name" = "XXX", "teachly" = 0) %>%
@@ -183,8 +218,10 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
 get_questions_from_quiz <- function(quiz) {
   questions_temp <- colnames(quiz)
   questions_temp <-
-    questions_temp[!str_detect(toupper(questions_temp),
-                               paste0("\\b", toupper(QUESTIONS_TO_TAKE_OUT), "\\b", collapse = "|"))]
+    questions_temp[!str_detect(
+      toupper(questions_temp),
+      paste0("\\b", toupper(QUESTIONS_TO_TAKE_OUT), "\\b", collapse = "|")
+    )]
   return(questions_temp)
 }
 
@@ -198,7 +235,7 @@ get_questions_from_quiz <- function(quiz) {
 #' @return A `shiny::Modal`
 #' @noRd
 
-students_list_modal <- function(dataframe, title = "Students"){
+students_list_modal <- function(dataframe, title = "Students") {
   # Change colnames
   colnames_to_show <- c("Name", "Teachly score")
 
@@ -219,18 +256,18 @@ students_list_modal <- function(dataframe, title = "Students"){
       options = list(
         pageLength = 200,
         dom = "t",
-        #ordering = FALSE,
+        # ordering = FALSE,
         scrollY = 450
       )
     ) |>
-      #If there is teachly in colnames
+      # If there is teachly in colnames
       (\(.) {
-        if ("teachly" %in% colnames(dataframe))
-        {
+        if ("teachly" %in% colnames(dataframe)) {
           . |>
             DT::formatStyle(c("teachly"),
-                            backgroundColor = DT::styleInterval(brks, clrs))
-        } else{
+              backgroundColor = DT::styleInterval(brks, clrs)
+            )
+        } else {
           .
         }
       })(),
