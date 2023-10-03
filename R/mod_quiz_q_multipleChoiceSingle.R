@@ -100,8 +100,8 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
       shiny::updateSelectInput(
         session,
         inputId = "quizviz_question",
-        choices = questions(),
-        selected = questions()[1]
+        choices = unique(questions()),
+        selected = unique(questions())[1]
       )
     })
 
