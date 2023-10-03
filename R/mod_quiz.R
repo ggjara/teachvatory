@@ -513,10 +513,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     mod_quiz_multipleChoiceSingle_server("quiz_multipleChoiceSingle_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_prediction_server("quiz_prediction_1", FALSE, main_inputs, quiz_processed)
-    ####### End Render #######
 
-    # output
-    #reactive(quiz_processed())
   })
   #mod_quiz_questionviz_server("quiz_questionviz_1", FALSE, main_inputs, quiz_processed)
 }
