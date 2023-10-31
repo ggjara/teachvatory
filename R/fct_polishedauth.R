@@ -5,8 +5,9 @@
 # app_name, and api_key are retrieved from the .Renv file
 # through the config package (./config.yml)
 polished::polished_config(
-  app_name = config::get("polished_app_name"),
-  api_key =  config::get("polished_api_key")
+
+app_name = config::get("polished_app_name"),
+api_key =  config::get("polished_api_key")
 )
 
 #' Polished custom sign in

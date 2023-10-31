@@ -25,7 +25,9 @@ NAMES_TO_REMOVE_FROM_QUIZ <- c("Student, Test", "Levy, Dan", "Dan Levy", "Dan, L
 
 
 # Initial Date
-INITIAL_DATE_DEFAULT = as.Date("2022-01-01")
+#INITIAL_DATE_DEFAULT = as.Date("2023-01-01") # fixed date
+current_year <- as.integer(format(Sys.Date(), "%Y"))
+INITIAL_DATE_DEFAULT <- as.Date(paste(current_year, "01-01", sep = "-"))
 
 # Color palette
 COLORS <- c("#9E2A2B", "#429EA6", "#383D3B", "#F4F4F9", "#FCDE9C")
