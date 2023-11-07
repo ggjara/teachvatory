@@ -100,8 +100,8 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
       shiny::updateSelectInput(
         session,
         inputId = "quizviz_question",
-        choices = questions(),
-        selected = questions()[1]
+        choices = unique(questions()),
+        selected = unique(questions())[1]
       )
     })
 
@@ -173,8 +173,18 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
                                  question)
         question_title <- ifelse(show_percentage, paste0(question_title, " (in %)"), paste0(question_title))
 
+        #fixing 0 and 1 to True and False in Responses
+        x_categories <- chart[[question]]
+        if (all(x_categories %in% c(TRUE, FALSE, 0, 1))) {
+          x_categories <- as.character(x_categories)
+          x_categories[x_categories == "0" | x_categories == "FALSE"] <- "FALSE"
+          x_categories[x_categories == "1" | x_categories == "TRUE"] <- "TRUE"
+        }
+
+
         highchart(type = "chart") |>
-          hc_xAxis(categories = chart[[question]]) |>
+          hc_xAxis(categories = x_categories, labels = list(style = list(fontSize = '18px'))) |>
+          hc_yAxis(labels = list(style = list(fontSize = '18px'))) |>
           (\(.) {
             if (correct_answer=="No correct answer")
             {
@@ -187,12 +197,20 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
             }
           })() |>
           hc_plotOptions(series = list(stacking="normal", dataLabels=list(enabled=T,  formatter= JS(paste0("function() { return this.y + '",char_extra,"'; }"))))) |>
-          hc_legend(enabled = T) |>
+          hc_legend(enabled = F) |>
           hc_title(text=question_title) |>
           hc_exporting(
             enabled = TRUE, # always enabled
-            filename = paste0("viz_", substr(question, 1, 20))
-          ) |>
+            filename = paste0("viz_", substr(question, 1, 20)),
+            chartOptions = list(
+              chart = list(
+                style = list(
+                  fontFamily = 'Arial, sans-serif'
+                )),
+              title = list(
+                style = list(
+                  fontFamily = 'Arial, sans-serif'
+                )))) |>
           hc_add_theme(hc_theme_smpl())
 
       }, error = function(e){
