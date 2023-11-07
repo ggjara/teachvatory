@@ -27,15 +27,17 @@ mod_quiz_prediction_ui <- function(id) {
         ),
         shinyWidgets::prettySwitch(
           inputId = ns("quizviz_axis_percentage"),
-          label = "Show as percentage",
+          label = "Y axis as share of resp.",
           status = "info",
-          fill = TRUE
+          fill = TRUE,
+          value = TRUE
         ),
         shinyWidgets::prettySwitch(
           inputId = ns("quizviz_axis_XRange"),
-          label = "Change X axis to 0-100",
+          label = "X axis: set range 0-100",
           status = "info",
-          fill = TRUE
+          fill = TRUE ,
+          value = TRUE
         ),
       ),
       bs4Dash::column(
@@ -137,10 +139,10 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
             hc_xAxis(labels = list(style = list(fontSize = "13px")) ) %>%
             hc_yAxis(labels = list(style = list(fontSize = "13px")) ) %>%
             hc_title(text=question_title, style = list(fontSize = "15px"))  %>%
-            hc_xAxis(plotLines = list(
-              list(color = "#FF5733",
+           hc_xAxis(plotLines = list(
+              list( color = if (correct_answer != "") "#FF5733" else "#FFFFFF",
                    dashStyle = "Solid",
-                   width = 3,
+                   width = if (correct_answer != "") 3 else 0,
                    value = correct_answer, zIndex = 10))) %>%
             hc_xAxis(
               min = if (axisXRange) 0 else NULL, # Set min to 0 if axisXRange is TRUE
@@ -190,9 +192,9 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
          ) %>%
          hc_legend(enabled = FALSE) %>%
                   hc_xAxis(plotLines = list(
-           list(color = "#FF5733",
-                dashStyle = "Solid",
-                width = 3,
+                    list( color = if (correct_answer != "") "#FF5733" else "#FFFFFF",
+                          dashStyle = "Solid",
+                          width = if (correct_answer != "") 3 else 0,
                 value = correct_answer, zIndex = 10)))  %>%
     hc_xAxis(
       min = if (axisXRange) 0 else NULL, # Set min to 0 if axisXRange is TRUE
