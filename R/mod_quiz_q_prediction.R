@@ -24,13 +24,27 @@ mod_quiz_prediction_ui <- function(id) {
           ns("quizviz_correctanswer"),
           label = "Enter a reference point (if one exists)",
           value = "None"
-        )
+        ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_axis_percentage"),
+          label = "Y axis as share of resp.",
+          status = "info",
+          fill = TRUE,
+          value = TRUE
+        ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_axis_XRange"),
+          label = "X axis: set range 0-100",
+          status = "info",
+          fill = TRUE ,
+          value = TRUE
+        ),
       ),
       bs4Dash::column(
         width = 8,
         shinycssloaders::withSpinner(
           highcharter::highchartOutput(
-          outputId = ns("quizviz_graph")
+            outputId = ns("quizviz_graph")
           )
         )
       )
@@ -103,24 +117,103 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
         quiz = quiz_processed()
         question = input$quizviz_question
         correct_answer = input$quizviz_correctanswer
+        axispercentage = input$quizviz_axis_percentage
+        axisXRange = input$quizviz_axis_XRange
+        question_title <- ifelse(nchar(question)>200,
+                                 paste0(substr(question, 1, 200), "..."),
+                                 question)
 
-        if (!is.na(correct_answer)) {
-          quiz %>%
-            pull(question) %>%
-            unlist() %>%
-            as.numeric() %>%
-            hchart() %>%
-            hc_xAxis(plotLines = list(
-              list(color = "#FF5733",
-                   dashStyle = "Solid",
-                   width = 3,
-                   value = correct_answer, zIndex = 10)))
-        } else {
-          quiz %>%
-            pull(question) %>%
-            unlist() %>%
-            as.numeric() %>%
-            hchart()
+
+        #here is predictions without percentages
+        if(axispercentage == FALSE) {
+          if (!is.na(correct_answer)) {
+
+            quiz %>%
+              pull(question) %>%
+              unlist() %>%
+              as.numeric() %>%
+              hchart() %>%
+              hc_legend(enabled = FALSE) %>%
+              hc_yAxis(title = list(text = "Number of respondents")) %>%
+              hc_xAxis(title = list(text = "Probability")) %>%
+              hc_xAxis(labels = list(style = list(fontSize = "13px")) ) %>%
+              hc_yAxis(labels = list(style = list(fontSize = "13px")) ) %>%
+              hc_title(text=question_title, style = list(fontSize = "15px"))  %>%
+              hc_xAxis(plotLines = list(
+                list( color = if (correct_answer != "") "#FF5733" else "#FFFFFF",
+                      dashStyle = "Solid",
+                      width = if (correct_answer != "") 3 else 0,
+                      value = correct_answer, zIndex = 10))) %>%
+              hc_xAxis(
+                min = if (axisXRange) 0 else NULL, # Set min to 0 if axisXRange is TRUE
+                max = if (axisXRange) 100 else NULL) %>% # Set max to 100 if axisXRange is TRUE
+              hc_exporting(
+                enabled = TRUE, # always enabled
+                filename = paste0("viz_", substr(question, 1, 20))) %>%
+              hc_chart(
+                backgroundColor = "#FFFFFF"  ) # Set the background color to white (you can change this to any color you prefer)
+
+          } else {
+
+            quiz %>%
+              pull(question) %>%
+              unlist() %>%
+              as.numeric() %>%
+              hchart() %>%
+              hc_legend(enabled = FALSE)
+          }
+        } else  {
+          #here is predictions WITH percentages
+          if (!is.na(correct_answer)) {
+
+
+            # Assuming 'quiz' is your data frame and 'question_title' is defined
+            quiz %>%
+              pull(question) %>%
+              as.numeric() %>%
+              hist(plot = FALSE, breaks = 20) -> hist_data
+
+            # Calculate percentages
+            hist_data$counts <- (hist_data$counts / sum(hist_data$counts)) * 100
+
+            # Create a data frame for the histogram data
+            histogram_data <- data.frame(
+              x = hist_data$mids,
+              y = hist_data$counts
+            )
+
+            hchart(histogram_data, "column") %>%
+              hc_yAxis(title = list(text = "Share of respondents (%)")) %>%
+              hc_xAxis(title = list(text = "Probability")) %>%
+              hc_title(text=question_title, style = list(fontSize = "15px")) %>%
+              hc_exporting(
+                enabled = TRUE, # always enabled
+                filename = paste0("viz_", substr(question, 1, 20))
+              ) %>%
+              hc_legend(enabled = FALSE) %>%
+              hc_xAxis(plotLines = list(
+                list( color = if (correct_answer != "") "#FF5733" else "#FFFFFF",
+                      dashStyle = "Solid",
+                      width = if (correct_answer != "") 3 else 0,
+                      value = correct_answer, zIndex = 10)))  %>%
+              hc_xAxis(
+                min = if (axisXRange) 0 else NULL, # Set min to 0 if axisXRange is TRUE
+                max = if (axisXRange) 100 else NULL) %>% # Set max to 100 if axisXRange is TRUE
+              hc_xAxis(labels = list(style = list(fontSize = "13px")) ) %>%
+              hc_yAxis(labels = list(style = list(fontSize = "13px")) ) %>%
+              hc_chart(
+                backgroundColor = "#FFFFFF"  ) # Set the background color to white (you can change this to any color you prefer)
+
+
+          } else {
+
+            quiz %>%
+              pull(question) %>%
+              unlist() %>%
+              as.numeric() %>%
+              hchart() %>%
+              hc_legend(enabled = FALSE)
+          }
         }
       }, error = function(e){
         NULL
