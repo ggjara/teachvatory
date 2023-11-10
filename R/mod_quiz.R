@@ -70,6 +70,10 @@ mod_quiz_ui <- function(id) {
         shiny::tabPanel(
           title = "Prediction",
           mod_quiz_prediction_ui(ns("quiz_prediction_1"))
+        ),
+        shiny::tabPanel(
+          title = "Crosstab",  # New "Crosstab" tab
+          mod_quiz_crosstab_ui(ns("quiz_crosstab_1"))  # Assuming you have a "mod_quiz_crosstab_ui" function
         )
       )
     ),
@@ -513,7 +517,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     mod_quiz_multipleChoiceSingle_server("quiz_multipleChoiceSingle_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_prediction_server("quiz_prediction_1", FALSE, main_inputs, quiz_processed)
-    ####### End Render #######
+    mod_quiz_crosstab_server("quiz_crosstab_1", FALSE, main_inputs, quiz_processed)
+        ####### End Render #######
 
     # output
     #reactive(quiz_processed())
