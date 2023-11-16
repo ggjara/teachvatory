@@ -28,8 +28,11 @@ vignettes/*.pdf
 .Renviron
 # Secrets
 .secrets/
+secrets/
 # RsConnect
 rsconnect/
 # MAC R Files
 .DS_Store
 .secrets
+
+
