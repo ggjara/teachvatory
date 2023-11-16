@@ -62,31 +62,28 @@ mod_quiz_crosstab_server <- function(id, stringAsFactors = FALSE, main_inputs, q
       })
     })
 
-    answers <- shiny::reactive({
-      tryCatch({
-        answers_temp <- quiz_processed() %>%
-          mutate(!!input$quizviz_question := as.character(.data[[input$quizviz_question]])) %>%
-          mutate(!!input$quizviz_question := case_when(
-            is.na(.data[[input$quizviz_question]]) ~ "No answer",
-            TRUE ~ .data[[input$quizviz_question]],
-          )) %>%
-          group_by(.data[[input$quizviz_question]]) %>%
-          summarize(n = n()) %>%
-          ungroup()
-        if(input$quizviz_arrange_by_frequency){
-          answers_temp <- answers_temp |>
-            arrange(desc(n))
-        }
+  answers <- shiny::reactive({
+    tryCatch({
+      answers_temp <- quiz_processed() %>%
+        mutate(!!input$quizviz_question := as.character(.data[[input$quizviz_question]])) %>%
+        mutate(!!input$quizviz_question := case_when(
+          is.na(.data[[input$quizviz_question]]) ~ "No answer",
+          TRUE ~ .data[[input$quizviz_question]],
+        )) %>%
+        group_by(.data[[input$quizviz_question]]) %>%
+        summarize(n = n()) %>%
+        ungroup()
 
-        answers_temp <- answers_temp |>
-          pull(.data[[input$quizviz_question]])
+      answers_temp <- answers_temp |>
+        pull(.data[[input$quizviz_question]])
 
-        c("No correct answer", answers_temp)
-      }, error= function(e){
-        NULL
-      })
-
+      c("No correct answer", answers_temp)
+    }, error= function(e){
+      NULL
     })
+
+  })
+
 
     shiny::observeEvent(quiz_processed(), {
       shiny::updateSelectInput(
@@ -97,12 +94,7 @@ mod_quiz_crosstab_server <- function(id, stringAsFactors = FALSE, main_inputs, q
       )
     })
 
-
-
-    #####
-
-
-  #second block of code / problem could not find function "quiz_processed"
+    #second block of code / problem could not find function "quiz_processed"
 
 
     # shiny::observeEvent(quiz_processed(), {

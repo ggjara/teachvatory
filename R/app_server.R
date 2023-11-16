@@ -191,9 +191,6 @@ app_server <- function(input, output, session) {
   quiz_processed <- mod_quiz_server("quiz_1", FALSE, main_inputs = main_inputs)
   # Call the submodule with the quiz processed.
   # The quiz processed is a reactive value of the quiz module (see last line of code of mod_quiz.R)
-  mod_quiz_multipleChoiceSingle_server("quiz_multipleChoiceSingle_1", FALSE, main_inputs, quiz_processed)
-  mod_quiz_prediction_server("quiz_prediction_1", FALSE, main_inputs, quiz_processed)
-  mod_quiz_crosstab_server("quiz_crosstab_1", FALSE, main_inputs, quiz_processed)
   mod_metrics_server("metrics_1", FALSE, main_inputs = main_inputs)
   mod_roster_server("roster_1", FALSE, main_inputs = main_inputs)
 }
