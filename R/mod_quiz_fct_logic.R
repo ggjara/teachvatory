@@ -94,7 +94,6 @@ filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INIT
           dplyr::filter(Timestamp >= as.Date(initial_date))
       },
       error = function(e) {
-
       }
     )
   }
@@ -173,11 +172,11 @@ filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INIT
 #' @noRd
 #' @import stringr dplyr
 join_quiz_roster <- function(quiz, roster, col_to_match) {
-  if (is.null(quiz)) {
+  if (is.null(quiz) | nrow(quiz)==0) {
     return(NULL)
   }
 
-  if (col_to_match == "" | is.null(col_to_match)) {
+  if (col_to_match == "" | is.null(col_to_match) ) {
     return(quiz)
   }
 

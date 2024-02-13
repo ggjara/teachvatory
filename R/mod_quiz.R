@@ -145,12 +145,13 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     # Process quiz: (1) Replace [Your Name] with [If Your Name...], (2) Delete NAs, (3) Delete repeated
     quiz_filtered <- shiny::reactive({
+
       shiny::req(quiz())
-      filter_quiz(
-        quiz = quiz(),
-        col_to_match =id_colname(),
-        col_alternative = id_colname_alternative(),
-        initial_date = input$initial_date)
+          filter_quiz(
+            quiz = quiz(),
+            col_to_match =id_colname(),
+            col_alternative = id_colname_alternative(),
+            initial_date = input$initial_date)
     })
 
 
