@@ -15,6 +15,7 @@ Imports:
     googledrive,
     googlesheets4,
     highcharter,
+    openai,
     polished,
     shiny (>= 1.7.4),
     shinycssloaders,

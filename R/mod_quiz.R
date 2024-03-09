@@ -524,11 +524,5 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     # output
     #reactive(quiz_processed())
   })
-  #mod_quiz_questionviz_server("quiz_questionviz_1", FALSE, main_inputs, quiz_processed)
 }
 
-## To be copied in the UI
-# mod_quiz_ui("quiz_1")
-
-## To be copied in the server
-# mod_quiz_server("quiz_1")
