@@ -86,7 +86,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         paste(collapse = " • ")
 
 
-      client <- OpenAI()
+      client <- openai::OpenAI()
       completion <- client$chat$completions$create(
         model = "gpt-4-0125-preview",
         messages = list(
