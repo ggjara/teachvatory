@@ -79,21 +79,20 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
 
     ai_response <- shiny::eventReactive(input$generate_analysis, {
       shinyjs::disable("generate_analysis")
+      tryCatch({
+        answers_concat <- quiz_processed() %>%
+          dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
+          dplyr::pull(name_answer) %>%
+          paste(collapse = " • ")
 
-      answers_concat <- quiz_processed() %>%
-        dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
-        dplyr::pull(name_answer) %>%
-        paste(collapse = " • ")
-
-
-      client <- openai::OpenAI()
-      completion <- client$chat$completions$create(
-        model = "gpt-4-0125-preview",
-        messages = list(
-          list(
-            "role" = "system",
-            "content" = paste(
-            "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
+        client <- openai::OpenAI()
+        completion <- client$chat$completions$create(
+          model = "gpt-4-0125-preview",
+          messages = list(
+            list(
+              "role" = "system",
+              "content" = paste(
+                "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
             You will do the following:
             1. Summarize the ", input$quizviz_analysis, " expressed by the students, and list up to five students who contributed to each point.
 
@@ -104,18 +103,22 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
             <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>
             ")
             ),
-          list(
-            "role" = "user",
-            "content" = paste0("
+            list(
+              "role" = "user",
+              "content" = paste0("
             Question: ", input$quizviz_question,"
 
             Answers:", answers_concat)
+            )
           )
         )
-      )
-      shinyjs::enable("generate_analysis")
-      completion$choices[[1]]$message$content
+        shinyjs::enable("generate_analysis")
+        completion$choices[[1]]$message$content
 
+        }, error = function(e){
+          "There was an error with your request. See the logs for more information."
+          shinyjs::enable("generate_analysis")
+        })
     })
 
 
