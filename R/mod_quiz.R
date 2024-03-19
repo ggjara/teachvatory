@@ -143,8 +143,18 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     # We know (by design) that masterquiz is the metadata
     # and that filter_quiz sheet name exists
     quiz <- shiny::eventReactive(input$submit_filters, {
-      googlesheets4::read_sheet(main_inputs$masterquiz_md(),
+      res <- googlesheets4::read_sheet(main_inputs$masterquiz_md(),
                                 sheet = input$filter_quiz)
+      # Correct lists
+      for (col in names(res)) {
+        # Check if the column is a list
+        if (is.list(res[[col]])) {
+          # Concatenate list elements into a single string
+          res[[col]] <- sapply(res[[col]], function(x) paste(x, collapse = " "))
+        }
+      }
+
+      res
     })
 
     # Process quiz: (1) Replace [Your Name] with [If Your Name...], (2) Delete NAs, (3) Delete repeated
