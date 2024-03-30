@@ -18,9 +18,9 @@ mod_quiz_aiSummary_ui <- function(id) {
           ns("quizviz_analysis"),
           "Analysis",
           choices = c("3 Main ideas", "4 Main Ideas", "5 Main Ideas",
-                      "3 Misconceptions", "4 Misconceptions"),
+                      "3 Misconceptions", "4 Misconceptions", "Other Feature"),
           selected = "Main ideas"
-        ),
+        ), shiny::uiOutput(ns("otherFeatureInput")),
         shiny::selectInput(
           ns("quizviz_question"),
           "Question",
@@ -86,6 +86,15 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           paste(collapse = " • ")
 
         client <- openai::OpenAI()
+
+        analysis_text <- if (input$quizviz_analysis == "Other Feature" && input$otherFeatureText != "") {
+          # Use input from otherFeatureText if 'Other Feature' is selected and the text input is not empty
+          input$otherFeatureText
+        } else {
+          # The standard text to be used if 'Other Feature' is not selected
+          paste("Summarize the ", input$quizviz_analysis, " expressed by the students, and list up to five students who contributed to each point.")
+        }
+
         completion <- client$chat$completions$create(
           model = "gpt-4-0125-preview",
           messages = list(
@@ -94,7 +103,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
               "content" = paste(
                 "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
             You will do the following:
-            1. Summarize the ", input$quizviz_analysis, " expressed by the students, and list up to five students who contributed to each point.
+            1. Summarize the ", analysis_text, " expressed by the students, and list up to five students who contributed to each point.
 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
             [Sudent 1 Name : Student 1 Answer • Student 2 Name: Student 2 Answer • ...]
@@ -122,7 +131,19 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         })
     })
 
-
+    # Observe the selection in the dropdown
+    observeEvent(input$quizviz_analysis, {
+      # Check if 'Other feature' is selected
+      if(input$quizviz_analysis == "Other Feature") {
+        # Display the text input
+        output$otherFeatureInput <- renderUI({
+          shiny::textInput(ns("otherFeatureText"), "Specify your feature:")
+        })
+      } else {
+        # Hide the text input when 'Other feature' is not selected
+        output$otherFeatureInput <- renderUI({})
+      }
+    })
 
     output$analysis_text <- renderUI({
       shiny::req(ai_response())
