@@ -99,8 +99,9 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
             [Sudent 1 Name : Student 1 Answer • Student 2 Name: Student 2 Answer • ...]
 
+            Please be sure that you limit to 5 students
             Format your response strictly as follows:
-            <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>
+            <b><u>Main ideas:</b></u> <br> <b>1. Idea 1</b> (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>
             ")
             ),
             list(
