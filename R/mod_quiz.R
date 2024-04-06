@@ -76,6 +76,10 @@ mod_quiz_ui <- function(id) {
           mod_quiz_aiSummary_ui(ns("quiz_aiSummary_1"))
         ),
         shiny::tabPanel(
+          title = "AI Quotes",
+          mod_quiz_aiQuotes_ui(ns("quiz_aiQuotes_1"))
+          ),
+         shiny::tabPanel(
           title = "Crosstab",
           mod_quiz_crosstab_ui(ns("quiz_Crosstab_1"))
         )
@@ -533,6 +537,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     mod_quiz_multipleChoiceSingle_server("quiz_multipleChoiceSingle_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_prediction_server("quiz_prediction_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_aiSummary_server("quiz_aiSummary_1", FALSE, main_inputs, quiz_processed)
+    mod_quiz_aiQuotes_server("quiz_aiQuotes_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_crosstab_server("quiz_Crosstab_1", FALSE, main_inputs, quiz_processed)
     ####### End Render #######
 
