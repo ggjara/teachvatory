@@ -77,28 +77,6 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
       get_idcolname(quiz_processed())
     })
 
-#changing to names to Firstname_Last Name initial - didnt work - have to tweak a bit
-   # id_colname <- shiny::reactive({
-      # Get the original column with full names
-   #   names_col <- get_idcolname(quiz_processed())
-
-      # Function to convert each name
-     # convert_name <- function(name) {
-        # Split the name by comma and trim any whitespace
-      #  parts <- trimws(strsplit(name, ",")[[1]])
-
-        # Extract the last and first names
-     #   last_name <- parts[1]
-     #   first_name <- parts[2]
-
-        # Construct the new name format: First Name + First initial of Last Name
-      #  paste0(first_name, " ", substr(last_name, 1, 1))
-    #  }
-
-      # Apply the function to each name in the column
-   #   sapply(names_col, convert_name)
-  #  })
-
     ai_response <- shiny::eventReactive(input$generate_analysis, {
       shinyjs::disable("generate_analysis")
       tryCatch({
@@ -114,7 +92,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           input$otherFeatureText
         } else {
           # The standard text to be used if 'Other Feature' is not selected
-          paste("Summarize the ", input$quizviz_analysis, " expressed by the students, and list up to five students who contributed to each point.")
+          paste(input$quizviz_analysis)
         }
 
         completion <- client$chat$completions$create(
@@ -132,7 +110,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
 
             Please be sure that you limit to 5 students.
             Format your response strictly as follows:
-            <b><u>Main ideas:</b></u> <br> <b>1. Idea 1</b> (<i>Student 1 First Name, Student 1 first letter of Last Name; Student 2 First Name, Student 2 first letter of Last Name; ...; Student 5 First Name, Student 5 first letter of Last Name</i>)<br><br>
+            <b><u>Main ideas:</b></u> <br> <b>1. Idea 1</b> (<i>Student 1 First Name Student 1 first letter of Last Name.; Student 2 First Name Student 2 first letter of Last Name.; ...; Student 5 First Name Student 5 first letter of Last Name.</i>)<br><br>
             ")
             ),
             list(
