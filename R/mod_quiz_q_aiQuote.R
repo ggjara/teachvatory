@@ -100,11 +100,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
         # Ensure we're correctly handling the 'Other' selection and treating it as a string
         type_selected <- ifelse(input$quizviz_type == "Other", input$custom_type, input$quizviz_type)
 
-        # answers_concat <- quiz_processed() %>%
-        #   dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
-        #   dplyr::pull(name_answer) %>%
-        #   paste(collapse = " • ")
-        answers_concat <- quiz_processed() %>%
+       answers_concat <- quiz_processed() %>%
           dplyr::mutate(
             formatted_answer = paste(
               .data[[id_colname()]], ": ", .data[[input$quizviz_question]],
