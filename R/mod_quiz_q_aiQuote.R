@@ -99,10 +99,20 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
       tryCatch({
         # Ensure we're correctly handling the 'Other' selection and treating it as a string
         type_selected <- ifelse(input$quizviz_type == "Other", input$custom_type, input$quizviz_type)
-        answers_concat <- quiz_processed() %>%
-          dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
-          dplyr::pull(name_answer) %>%
+
+       answers_concat <- quiz_processed() %>%
+          dplyr::mutate(
+            formatted_answer = paste(
+              .data[[id_colname()]], ": ", .data[[input$quizviz_question]],
+              " |  ", .data[["teachly"]], # Assuming 'teachly' is the column name for Teachly scores
+              sep = ""
+            )
+          ) %>%
+          dplyr::pull(formatted_answer) %>%
           paste(collapse = " • ")
+
+
+
 
         client <- openai::OpenAI()
         completion <- client$chat$completions$create(
@@ -116,10 +126,10 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             1. Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.
 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
-            [Student 1 Name: Student 1 Answer • Student 2 Name: Student 2 Answer • ...]
+            [Student 1 Name: Student 1 Answer | Student 1 Teachly score  • Student 2 Name: Student 2 Answer| Student 2 Teachly score • ...]
 
             Format your response strictly as follows:
-            <b>Quotes:</b><br>1. Answer i <br>(<i>Student i Name </i>)<br><br>
+            <b>Quotes:</b><br>1. Answer i <br>(<i>Student i Name </i>)<br> <br> <i>TEACHLY SCORE:<i> Student i Teachly Score<br><br>
             ")
             ),
             list(
