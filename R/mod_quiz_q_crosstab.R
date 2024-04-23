@@ -16,43 +16,28 @@ mod_quiz_crosstab_ui <- function(id) {
         width = 4,
         shiny::selectInput(
           ns("quizviz_question"),
-          "Question 1",
+          "Question 1 (Rows)",
           choices = c(""),
           selected = NULL
         ),
         shiny::selectInput(
           ns("quizviz_question2"),
-          "Question 2",
+          "Question 2 (Col.)",
           choices = c(""),
           selected = NULL
         ),
-        # shinyWidgets::prettySwitch(
-        #   inputId = ns("table_percentage"),
-        #   label = "Show as percentage",
-        #   status = "info",
-        #   fill = TRUE,
-        #   value = TRUE
-        shiny::selectInput(
+          shiny::selectInput(
           ns("display_type"),
           "Display Type",
           choices = c("Show as count", "Percentage (total)", "Percentage (rows)", "Percentage (columns)", "Weighted Average for Q2"),
           selected = "Show as count"
-        ),
-        # shinyWidgets::prettySwitch(
-        #   inputId = ns("weighted_average"),
-        #   label = "Weighted Avg. for Q1",
-        #   status = "info",
-        #   fill = TRUE,
-        #   value = FALSE
-        # ),
-          ),
+        )
+      ),
       bs4Dash::column(
         width = 8,
         shinycssloaders::withSpinner(
            DT::dataTableOutput(
-           outputId = ns("crosstab_table")
-
-             )
+           outputId = ns("crosstab_table"))
         )
       )
     )
@@ -207,5 +192,6 @@ mod_quiz_crosstab_server <- function(id, stringAsFactors = FALSE, main_inputs, q
       })
 
     })
+
   })
 }
