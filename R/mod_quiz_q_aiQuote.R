@@ -23,7 +23,7 @@ mod_quiz_aiQuotes_ui <- function(id) {
         shiny::selectInput(
           ns("quizviz_type"),
           "Type",
-          choices = c("More Unique", "Funier", "More Interesting", "Other"),
+          choices = c("More Unique", "Funnier", "More Interesting", "Other"),
           selected =  "More Interesting"
         ),
         shiny::uiOutput(ns("custom_type_input")
@@ -33,6 +33,13 @@ mod_quiz_aiQuotes_ui <- function(id) {
           "Question",
           choices = c(""),
           selected = NULL
+        ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("prioritize_teachly"),
+          label = "Prioritize Low Teachly Score",
+          status = "info",
+          fill = TRUE ,
+          value = TRUE
         ),
         # Submit button
         bs4Dash::actionButton(
@@ -112,6 +119,11 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
           paste(collapse = " • ")
 
 
+       prioritize_text <- if(input$prioritize_teachly) {
+         " Prioritize those answers from students with low Teachly scores."
+       } else {
+         ""
+       }
 
 
         client <- openai::OpenAI()
@@ -123,13 +135,13 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
               "content" = paste(
                 "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class.
             You will do the following:
-            1. Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.
+            1. Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS. ",prioritize_text,"
 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
             [Student 1 Name: Student 1 Answer | Student 1 Teachly score  • Student 2 Name: Student 2 Answer| Student 2 Teachly score • ...]
 
             Format your response strictly as follows:
-            <b>Quotes:</b><br>1. Answer i <br>(<i>Student i Name </i>)<br> <br> <i>TEACHLY SCORE:<i> Student i Teachly Score<br><br>
+            <b>Quotes:</b><br>1. Answer i <br>( <i> Student i Name </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j Name </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
             ")
             ),
             list(
@@ -149,6 +161,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
           shinyjs::enable("generate_analysis")
         })
     })
+
 
 
 
