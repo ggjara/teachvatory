@@ -21,7 +21,7 @@ performance and quizzes’ answers.
 
 ## Editing app using GitHub workflow
 
-1) Get GitHub branch name of the issue you want to solve (See options in [Linear](https://linear.app))
+1) Get GitHub branch name of the issue you want to solve or the feature you want to add.
 2) **Checkout** Standing on the app's directory, write on  terminal:  
 `git checkout -b [branch-name]`  
 The command `-b` allows you to create and move to the branch in one command.
@@ -46,14 +46,6 @@ The command `-b` allows you to create and move to the branch in one command.
     * Open `app.R` and press the Rsconnect publish button on the top right of RStudio.
     * Standing on the app's directory write on R:  
     `rsconnect::deployApp()`
-
-
-## Others
-
-- You can access the terminal through any terminal shell or from [RStudio IDE](https://posit.co)
-- You can interact with Git through the terminal (as described above) or through [GitHub Desktop](https://desktop.github.com) (which I highly recommend it)
-
-
 
 
 ***Last update***: January 30th, 2023 by Gonzalo
