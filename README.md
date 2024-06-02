@@ -1,4 +1,4 @@
-# teachvatory
+# Teachvatory
 
 <!-- badges: start -->
 
@@ -6,7 +6,7 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-The goal of teachvatory is to provide an easy visualization of students’
+The goal of teachvatory is to provide a visualization and AI-driven analysis of students’
 performance and quizzes’ answers.
 
 ## Installation
