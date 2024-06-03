@@ -105,19 +105,6 @@ mod_quiz_crosstab_server <- function(id, stringAsFactors = FALSE, main_inputs, q
       )
     })
 
-    format_percentage <- function(df) {
-      df <- as.data.frame(lapply(df, function(x) {
-        if (is.numeric(x)) {
-          paste0(x, "%")
-        } else {
-          x
-        }
-      }))
-      df
-    }
-
-
-
     output$crosstab_table <- DT::renderDT({
       shiny::req(quiz_processed())
       shiny::validate(
@@ -181,7 +168,8 @@ mod_quiz_crosstab_server <- function(id, stringAsFactors = FALSE, main_inputs, q
           }
 
           if (display_type %in% c("Percentage (total)", "Percentage (rows)", "Percentage (columns)")) {
-            crosstab_df <- format_percentage(crosstab_df)
+            numeric_cols <- sapply(crosstab_df, is.numeric)
+            crosstab_df[, numeric_cols] <- lapply(crosstab_df[, numeric_cols], function(x) paste0(x, "%"))
           }
 
         }
