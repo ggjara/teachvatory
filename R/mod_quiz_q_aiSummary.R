@@ -182,15 +182,16 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
             "As an AI teaching assistant, your task is to analyse students' responses to two questions posed in class to identify main concepts in their answers and list the students who contributed to each concept.
 
        I will provide the questions and the students' answers. The students' answers will be provided as follows:
-        [Student 1 Name : Student 1 Answer Question 1 : Student 1 Answer Question 2 • Student 2 Name: Student 2 Answer Question 1 : Student 2 Answer Question 2 • ...]
+        [Student 1 Last Name, Student 1 First Name : Student 1 Answer Question 1 : Student 1 Answer Question 2 • Student 2 Last Name, Student 2 First Name: Student 2 Answer Question 1 : Student 2 Answer Question 2 • ...]
 
 
         You will do the following:
-        1. Summarize the ", type_selected, " expressed by the students in their answers to Question 1, choosing ONLY those that answered Question 2 as ", input$quizviz_answers2, ", and list UP TO FIVE students MAX who contributed to each point.
+        1. Choosing ONLY the students that answered Question 2 as ", input$quizviz_answers2, ", summarize the ", type_selected, " expressed by those students in their answers to Question 1.
+        2. After each point, you will list UP TO FIVE students MAX who contributed to each point. DO NOT LIST MORE THAN 5 STUDENTS.
 
 
         Format your response strictly as follows:
-        <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>"
+        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName ; Student j FirstName LastName; ...</i>)<br><br>"
           )
         } else {
           answers_concat <- quiz_processed() %>%
@@ -205,13 +206,14 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           prompt_content <- paste(
             "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
         You will do the following:
-        1. Summarize the ", type_selected, " expressed by the students, and list UP TO FIVE students MAX who contributed to each point.
+        1. Summarize the ", type_selected, " expressed by the students.
+        2.After each point, you will list UP TO FIVE students MAX who contributed to each point.DO NOT LIST MORE THAN 5 STUDENTS.
 
         I will provide the question and the students' answers. The students' answers will be provided as follows:
-        [Student 1 Name : Student 1 Answer • Student 2 Name: Student 2 Answer • ...]
+        [Student 1 LastName, Student 1 FirstName : Student 1 Answer • Student 2 LastName, Student 2 FirstName: Student 2 Answer • ...]
 
         Format your response strictly as follows:
-        <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>"
+        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>"
           )
         }
 
