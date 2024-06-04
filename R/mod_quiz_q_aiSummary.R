@@ -18,15 +18,43 @@ mod_quiz_aiSummary_ui <- function(id) {
           ns("quizviz_analysis"),
           "Analysis",
           choices = c("3 Main ideas", "4 Main Ideas", "5 Main Ideas",
-                      "3 Misconceptions", "4 Misconceptions"),
+                      "3 Misconceptions", "4 Misconceptions", "Other"),
           selected = "Main ideas"
         ),
+        shiny::uiOutput(ns("custom_type_input")
+        ), # Placeholder for the conditional input
+
         shiny::selectInput(
           ns("quizviz_question"),
           "Question",
           choices = c(""),
           selected = NULL
         ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("second_question"),
+          label = "Filter by other Question",
+          status = "info",
+          fill = TRUE ,
+          value = FALSE
+        ),
+        shiny::conditionalPanel(
+          condition = paste0("input['", ns("second_question"), "'] == true"),
+          tagList(
+            shiny::selectInput(
+              ns("quizviz_question2"),
+              "Question 2",
+              choices = c(""),
+              selected = NULL
+            ),
+            shiny::selectInput(
+              ns("quizviz_answers2"),
+              "Select Answers for Q2",
+              choices = c(""), # This will be updated with actual choices in the server function
+              selected = NULL
+            )
+          )
+        ),
+
         # Submit button
         bs4Dash::actionButton(
           inputId = ns("generate_analysis"),
@@ -72,6 +100,59 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
       )
     })
 
+    shiny::observeEvent(quiz_processed(), {
+      shiny::updateSelectInput(
+        session,
+        inputId = "quizviz_question2",
+        choices = unique(questions()),
+        selected = unique(questions())[1]
+      )
+    })
+
+    answers2 <- shiny::reactive({
+      tryCatch({
+        answers_temp <- quiz_processed() %>%
+          mutate(!!input$quizviz_question2 := as.character(.data[[input$quizviz_question]])) %>%
+          mutate(!!input$quizviz_question2 := case_when(
+            is.na(.data[[input$quizviz_question2]]) ~ "No answer",
+            TRUE ~ .data[[input$quizviz_question2]],
+          )) %>%
+          group_by(.data[[input$quizviz_question2]]) %>%
+          summarize(n = n()) %>%
+          ungroup()
+
+        answers_temp <- answers_temp %>%
+          pull(.data[[input$quizviz_question2]]) %>%
+          unique()  # Remove duplicates
+
+        c("No correct answer", answers_temp)
+      }, error = function(e) {
+        NULL
+      })
+    })
+
+    shiny::observeEvent(input$quizviz_question2, {
+      possible_answers <- answers2()
+      shiny::updateSelectInput(
+        session,
+        inputId = "quizviz_answers2",
+        choices = possible_answers,
+        selected = possible_answers[1]
+      )
+    })
+
+
+
+    shiny::observe({
+      if (input$quizviz_analysis == "Other") {
+        output$custom_type_input <- shiny::renderUI({
+          shiny::textInput(ns("custom_type"), "Specify Type")
+        })
+      } else {
+        output$custom_type_input <- shiny::renderUI({ NULL }) # Render nothing if not "Other"
+      }
+    })
+
     # Get colname of "Your Name" input. If doesn't exist, return ""
     id_colname <- shiny::reactive({
       get_idcolname(quiz_processed())
@@ -80,10 +161,59 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
     ai_response <- shiny::eventReactive(input$generate_analysis, {
       shinyjs::disable("generate_analysis")
       tryCatch({
-        answers_concat <- quiz_processed() %>%
-          dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
-          dplyr::pull(name_answer) %>%
-          paste(collapse = " • ")
+        # Ensure we're correctly handling the 'Other' selection and treating it as a string
+        type_selected <- ifelse(input$quizviz_analysis == "Other", input$custom_type, input$quizviz_analysis)
+
+        if (input$second_question) {
+          answers_concat <- quiz_processed() %>%
+            dplyr::mutate(name_answer = paste(.data[[id_colname()]],
+                                              .data[[input$quizviz_question]],
+                                              .data[[input$quizviz_question2]], sep = ": ")) %>%
+            dplyr::pull(name_answer) %>%
+            paste(collapse = " • ")
+
+          question_text <- paste0("
+        Question 1: ", input$quizviz_question, "\n
+        Question 2: ", input$quizviz_question2, "\n
+        Answer for Question 2 to consider: ", input$quizviz_answers2, "\n
+        Answers:", answers_concat)
+
+          prompt_content <- paste(
+            "As an AI teaching assistant, your task is to analyse students' responses to two questions posed in class to identify main concepts in their answers and list the students who contributed to each concept.
+
+       I will provide the questions and the students' answers. The students' answers will be provided as follows:
+        [Student 1 Name : Student 1 Answer Question 1 : Student 1 Answer Question 2 • Student 2 Name: Student 2 Answer Question 1 : Student 2 Answer Question 2 • ...]
+
+
+        You will do the following:
+        1. Summarize the ", type_selected, " expressed by the students in their answers to Question 1, choosing ONLY those that answered Question 2 as ", input$quizviz_answers2, ", and list UP TO FIVE students MAX who contributed to each point.
+
+
+        Format your response strictly as follows:
+        <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>"
+          )
+        } else {
+          answers_concat <- quiz_processed() %>%
+            dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
+            dplyr::pull(name_answer) %>%
+            paste(collapse = " • ")
+
+          question_text <- paste0("
+        Question: ", input$quizviz_question, "\n
+        Answers:", answers_concat)
+
+          prompt_content <- paste(
+            "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
+        You will do the following:
+        1. Summarize the ", type_selected, " expressed by the students, and list UP TO FIVE students MAX who contributed to each point.
+
+        I will provide the question and the students' answers. The students' answers will be provided as follows:
+        [Student 1 Name : Student 1 Answer • Student 2 Name: Student 2 Answer • ...]
+
+        Format your response strictly as follows:
+        <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>"
+          )
+        }
 
         client <- openai::OpenAI()
         completion <- client$chat$completions$create(
@@ -91,42 +221,28 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           messages = list(
             list(
               "role" = "system",
-              "content" = paste(
-                "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
-            You will do the following:
-            1. Summarize the ", input$quizviz_analysis, " expressed by the students, and list up to five students who contributed to each point.
-
-            I will provide the question and the students' answers. The students' answers will be provided as follow:
-            [Sudent 1 Name : Student 1 Answer • Student 2 Name: Student 2 Answer • ...]
-
-            Format your response strictly as follows:
-            <b>Main ideas:</b><br>1. Idea 1 (<i>Student 1 Name; Student 2 Name; ...; Student 5 Name</i>)<br><br>
-            ")
+              "content" = prompt_content
             ),
             list(
               "role" = "user",
-              "content" = paste0("
-            Question: ", input$quizviz_question,"
-
-            Answers:", answers_concat)
+              "content" = question_text
             )
           )
         )
         shinyjs::enable("generate_analysis")
         completion$choices[[1]]$message$content
 
-        }, error = function(e){
-          "There was an error with your request. See the logs for more information."
-          shinyjs::enable("generate_analysis")
-        })
+      }, error = function(e) {
+        shinyjs::enable("generate_analysis")
+        "There was an error with your request. See the logs for more information."
+      })
     })
-
-
 
     output$analysis_text <- renderUI({
       shiny::req(ai_response())
       HTML(ai_response())
     })
+
 
 
 
