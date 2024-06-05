@@ -166,6 +166,12 @@ mod_quiz_crosstab_server <- function(id, stringAsFactors = FALSE, main_inputs, q
           if (display_type != "Percentage (rows)") {
             rownames(crosstab_df)[nrow(crosstab_df)] <- "Total"
           }
+
+          if (display_type %in% c("Percentage (total)", "Percentage (rows)", "Percentage (columns)")) {
+            numeric_cols <- sapply(crosstab_df, is.numeric)
+            crosstab_df[, numeric_cols] <- lapply(crosstab_df[, numeric_cols], function(x) paste0(x, "%"))
+          }
+
         }
 
         # Render the datatable
