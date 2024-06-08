@@ -128,7 +128,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
 
         client <- openai::OpenAI()
         completion <- client$chat$completions$create(
-          model = "gpt-4-0125-preview",
+          model = "gpt-4o",
           messages = list(
             list(
               "role" = "system",
