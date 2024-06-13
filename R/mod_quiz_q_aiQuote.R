@@ -138,11 +138,13 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             1. Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS. ",prioritize_text,"
 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
-            [Student 1 Name: Student 1 Answer | Student 1 Teachly score  • Student 2 Name: Student 2 Answer| Student 2 Teachly score • ...]
+            [Student 1 LastName, Student 1 FirstName: Student 1 Answer | Student 1 Teachly score  • Student 2 LastName, Student 2 FirstName: Student 2 Answer| Student 2 Teachly score • ...]
 
             Format your response strictly as follows:
-            <b>Quotes:</b><br>1. Answer i <br>( <i> Student i Name </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j Name </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
-            ")
+            <b>Quotes:</b><br>1. Answer i <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
+
+            Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
+                ")
             ),
             list(
               "role" = "user",
