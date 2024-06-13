@@ -112,7 +112,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
     answers2 <- shiny::reactive({
       tryCatch({
         answers_temp <- quiz_processed() %>%
-          mutate(!!input$quizviz_question2 := as.character(.data[[input$quizviz_question]])) %>%
+          mutate(!!input$quizviz_question2 := as.character(.data[[input$quizviz_question2]])) %>%
           mutate(!!input$quizviz_question2 := case_when(
             is.na(.data[[input$quizviz_question2]]) ~ "No answer",
             TRUE ~ .data[[input$quizviz_question2]],
@@ -191,7 +191,9 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
 
 
         Format your response strictly as follows:
-        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName ; Student j FirstName LastName; ...</i>)<br><br>"
+        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName ; Student j FirstName LastName; ...</i>)<br><br>
+
+        Be very careful with the names, be sure to write them as FirstName Lastname, in that order.    "
           )
         } else {
           answers_concat <- quiz_processed() %>%
@@ -213,7 +215,9 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         [Student 1 LastName, Student 1 FirstName : Student 1 Answer • Student 2 LastName, Student 2 FirstName: Student 2 Answer • ...]
 
         Format your response strictly as follows:
-        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>"
+        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
+
+        Be very careful with the names, be sure to write them as FirstName Lastname, in that order.        "
           )
         }
 
