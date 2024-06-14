@@ -118,10 +118,33 @@ mod_quiz_ui <- function(id) {
             )
           )
         ),
-        shiny::fluidRow(column(width = 12,
-                               shinycssloaders::withSpinner(DT::DTOutput(ns(
-                                 "quiz_table"
-                               )))))
+        shiny::fluidRow(
+          column(
+            width = 12,
+            shinycssloaders::withSpinner(
+              DT::DTOutput(
+                ns(
+                  "quiz_table"
+                )
+              )
+            )
+          )
+        )
+      )
+    ),
+    # New fluidRow for displaying all answers of the loaded quiz
+    shiny::fluidRow(
+      bs4Dash::box(
+        id = ns("box_all_answers"),
+        width = 12,
+        title = "All Quiz Answers",
+        status = "primary",
+        solidHeader = FALSE,
+        collapsible = TRUE,
+        collapsed = TRUE,
+        shinycssloaders::withSpinner(
+          DT::DTOutput(ns("all_quiz_answers"))
+        )
       )
     )
   )
@@ -171,7 +194,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       shiny::req(quiz())
           filter_quiz(
             quiz = quiz(),
-            col_to_match =id_colname(),
+            col_to_match = id_colname(),
             col_alternative = id_colname_alternative(),
             initial_date = input$initial_date)
     })
@@ -532,6 +555,25 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
       dt
 
+    })
+
+    # New output for rendering all quiz answers
+    output$all_quiz_answers <- DT::renderDT({
+      shiny::req(quiz_processed())
+      DT::datatable(
+        quiz_processed(),
+        escape = FALSE,
+        rownames = FALSE,
+        style = "bootstrap4",
+        filter = "top",
+        selection = "none",
+        options = list(
+          pageLength = 100,
+          autowidth = TRUE,
+          scrollX = TRUE,
+          buttons = c('copy', 'csv', 'excel')
+        )
+      )
     })
 
     mod_quiz_multipleChoiceSingle_server("quiz_multipleChoiceSingle_1", FALSE, main_inputs, quiz_processed)
