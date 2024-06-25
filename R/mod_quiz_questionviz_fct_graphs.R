@@ -83,9 +83,10 @@ chart_multiplechoise_multiple <- function(quiz, question) {
 }
 
 #' Histogram for prediction questions
-chart_prediction <- function(quiz, question,
-                                        correct_answer = NA,
-                                        arrange_by_frequency = TRUE) {
+chart_prediction <- function(quiz,
+                             question,
+                             correct_answer = NA,
+                             arrange_by_frequency = TRUE) {
 
   if (!is.na(correct_answer)) {
     quiz %>%
