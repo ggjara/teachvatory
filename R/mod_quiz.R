@@ -560,8 +560,39 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     # New output for rendering all quiz answers
     output$all_quiz_answers <- DT::renderDT({
       shiny::req(quiz_processed())
-      DT::datatable(
-        quiz_processed(),
+      # Adding validation
+      shiny::validate(
+        shiny::need(
+          !is.null(quiz_processed()),
+          message = "Quiz was not uploaded correctly. Check your inputs."
+        )
+      )
+
+      # Prepare the quiz data
+      quiz_data <- quiz_processed()
+
+      # Conditionally remove 'timestamp', 'order', and 'Imported' if they exist
+      cols_toremove <- c("Timestamp", "timestamp", "order", "Imported")
+      existing_cols <- cols_toremove[cols_toremove %in% colnames(quiz_data)]
+      quiz_data <- quiz_data |>
+        dplyr::select(-all_of(existing_cols))
+
+      # Rename variations of 'Your Name' and 'teachly'/'Teachly'
+      quiz_data <- quiz_data %>%
+        rename_with(~ "Name", .cols = matches("^[Yy]our [Nn]ame$")) %>%
+        rename_with(~ "Teachly", .cols = matches("^[Tt]eachly$"))
+
+      # 'Name' and 'Teachly' should go first as in the other crosstab
+      quiz_data <- quiz_data %>%
+        select(Name, Teachly, everything())
+
+      # Matching colors based on teachly score
+      brks <- seq(0, 1, 0.1)
+      clrs <- colorRampPalette(c("#dc3545", "#ffc107", "#28a745"))(length(brks) + 1)
+
+      # Create the datatable
+      dt_all <- DT::datatable(
+        quiz_data,
         escape = FALSE,
         rownames = FALSE,
         style = "bootstrap4",
@@ -574,6 +605,17 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           buttons = c('copy', 'csv', 'excel')
         )
       )
+
+      # Optional: Apply style based on Teachly score if column exists
+      if ("Teachly" %in% colnames(quiz_data)){
+        dt_all <- dt_all |>
+          DT::formatStyle(
+            "Teachly",
+            backgroundColor = DT::styleInterval(brks, clrs)
+          )
+      }
+
+      dt_all
     })
 
     mod_quiz_multipleChoiceSingle_server("quiz_multipleChoiceSingle_1", FALSE, main_inputs, quiz_processed)
