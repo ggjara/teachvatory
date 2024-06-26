@@ -79,7 +79,7 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
             TRUE ~ .data[[input$quizviz_question]],
           )) %>%
           group_by(.data[[input$quizviz_question]]) %>%
-          summarize(n = n()) %>%
+          summarize(n = n(), .groups = "drop") %>%
           ungroup()
         if(input$quizviz_arrange_by_frequency){
           answers_temp <- answers_temp |>
@@ -133,8 +133,6 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
           char_extra="%"
         }
 
-
-
         chart <- quiz %>%
           mutate(!!question := as.character(.data[[question]])) %>%
           mutate(!!question := case_when(
@@ -142,45 +140,53 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
             TRUE ~ .data[[question]],
           ))  %>%
           group_by(.data[[question]]) %>%
-          summarize(n = n()) %>%
+          summarize(n = n(), .groups = "drop") %>%
           ungroup()
 
-        if(show_percentage){
-          chart <- chart |>
-            mutate(n=round(n*100/sum(n, na.rm=TRUE)), 2)
-        }
+        # Check the number of categories
+        if (n_distinct(chart[[question]]) > 5) {
+          highchart() |>
+            hc_title(text = "Question is not categorical. Plot cannot be made.")
+        } else {
+          if (show_percentage) {
+            chart <- chart %>%
+              mutate(n = round(n * 100 / sum(n, na.rm = TRUE), 2))
+          }
+
+          if (arrange_by_frequency) {
+            chart <- chart %>%
+              arrange(desc(n))
+          }
+
         chart <- chart |>
           mutate(correct = .data[[question]] == correct_answer) |>
           mutate(n_correct = case_when(
             correct ~ n,
-            TRUE ~ NA_integer_)) |>
+            TRUE ~ NA_integer_)
+          ) |>
           mutate(n_incorrect = case_when(
             !correct ~ n,
             TRUE ~ NA_integer_
           ))
 
-        if(arrange_by_frequency){
-          chart <- chart %>%
-            arrange(desc(n))
-        }
-
-
         chart <- chart %>%
           mutate(!!question := factor(.data[[question]], levels = unique(chart[[question]])))
 
-        question_title <- ifelse(nchar(question)>200,
-                                 paste0(substr(question, 1, 200), "..."),
-                                 question)
+        question_title <- ifelse(
+          nchar(question)>200,
+          paste0(substr(question, 1, 200), "..."),
+          question
+        )
+
         question_title <- ifelse(show_percentage, paste0(question_title, " (in %)"), paste0(question_title))
 
-        #fixing 0 and 1 to True and False in Responses
+        # Fixing 0 and 1 to True and False in Responses
         x_categories <- chart[[question]]
         if (all(x_categories %in% c(TRUE, FALSE, 0, 1))) {
           x_categories <- as.character(x_categories)
           x_categories[x_categories == "0" | x_categories == "FALSE"] <- "FALSE"
           x_categories[x_categories == "1" | x_categories == "TRUE"] <- "TRUE"
         }
-
 
         highchart(type = "chart") |>
           hc_xAxis(categories = x_categories, labels = list(style = list(fontSize = '18px'))) |>
@@ -212,7 +218,7 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
                   fontFamily = 'Arial, sans-serif'
                 )))) |>
           hc_add_theme(hc_theme_smpl())
-
+        }
       }, error = function(e){
         NULL
       })
