@@ -90,7 +90,9 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
 
     questions <- shiny::reactive({
       tryCatch({
-        questions = get_questions_from_quiz(quiz_processed())
+        questions <- get_questions_from_quiz(quiz_processed())
+        questions <- questions[questions != "order"]
+        questions
       }, error = function(e){
         NULL
       })
@@ -99,8 +101,8 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
     answers <- shiny::reactive({
       tryCatch({
         answers_temp <- quiz_processed() %>%
-          mutate(!!rlang::sym(input$quizviz_question) := as.character(.data[[input$quizviz_question]])) %>%
-          mutate(!!rlang::sym(input$quizviz_question) := case_when(
+          mutate(!!input$quizviz_question := as.character(.data[[input$quizviz_question]])) %>%
+          mutate(!!input$quizviz_question := case_when(
             is.na(.data[[input$quizviz_question]]) ~ "No answer",
             TRUE ~ .data[[input$quizviz_question]],
           )) %>%
@@ -199,8 +201,8 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
         print(paste("Sorted categories:", sorted_categories()))
 
         chart <- quiz %>%
-          mutate(!!rlang::sym(question) := as.character(.data[[question]])) %>%
-          mutate(!!rlang::sym(question) := case_when(
+          mutate(!!question := as.character(.data[[question]])) %>%
+          mutate(!!question := case_when(
             is.na(.data[[question]]) ~ "No answer",
             TRUE ~ .data[[question]],
           )) %>%
@@ -209,9 +211,11 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
           ungroup()
 
         if (n_distinct(chart[[question]]) > 5) {
-          return(highchart() |>
-                   hc_title(text = "Question is not categorical. Plot cannot be made.") |>
-                   hc_add_theme(hc_theme_smpl()))
+          return(
+            highchart() |>
+              hc_title(text = "Question is not categorical. Plot cannot be made.") |>
+              hc_add_theme(hc_theme_smpl())
+          )
         }
 
         if (show_percentage) {
@@ -220,14 +224,16 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
         }
 
         if (use_sortable && !is.null(sorted_categories())) {
-          chart <- chart |>
-            mutate(!!rlang::sym(question) := factor(.data[[question]], levels = sorted_categories()))
+          chart <- chart %>%
+            mutate(!!question := factor(.data[[question]], levels = sorted_categories())) %>%
+            arrange(factor(.data[[question]], levels = sorted_categories()))
         } else if (arrange_by_frequency) {
           chart <- chart |>
-            arrange(desc(n))
+            arrange(desc(n)) %>%
+            mutate(!!question := factor(.data[[question]], levels = .data[[question]]))
         } else {
           chart <- chart %>%
-            mutate(!!rlang::sym(question) := factor(.data[[question]], levels = unique(chart[[question]])))
+            mutate(!!question := factor(.data[[question]], levels = unique(chart[[question]])))
         }
 
         chart <- chart %>%
@@ -243,7 +249,9 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
 
         question_title <- ifelse(show_percentage, paste0(question_title, " (in %)"), question_title)
 
-        x_categories <- chart[[question]]
+        x_categories <- levels(chart[[question]])
+
+        # Conditional check for TRUE, FALSE, 0, 1
         if (all(x_categories %in% c(TRUE, FALSE, 0, 1))) {
           x_categories <- as.character(x_categories)
           x_categories[x_categories == "0" | x_categories == "FALSE"] <- "FALSE"
@@ -256,11 +264,11 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
           (\(.) {
             if (correct_answer == "No correct answer") {
               . |>
-                hc_add_series(type = 'bar', chart[['n']], color = COLOR_DEFAULT, name = "Responses")
+                hc_add_series(type = 'bar', data = chart[['n']], color = COLOR_DEFAULT, name = "Responses")
             } else {
               . |>
-                hc_add_series(type = 'bar', chart[['n_correct']], color = COLOR_GREEN, name = "Correct") |>
-                hc_add_series(type = 'bar', chart[['n_incorrect']], color = COLOR_DEFAULT, name = "Incorrect")
+                hc_add_series(type = 'bar', data = chart[['n_correct']], color = COLOR_GREEN, name = "Correct") |>
+                hc_add_series(type = 'bar', data = chart[['n_incorrect']], color = COLOR_DEFAULT, name = "Incorrect")
             }
           })() |>
           hc_plotOptions(series = list(stacking = "normal", dataLabels = list(enabled = TRUE, formatter = JS(paste0("function() { return this.y + '", char_extra, "'; }"))))) |>
