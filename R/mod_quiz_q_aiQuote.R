@@ -107,23 +107,24 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
         # Ensure we're correctly handling the 'Other' selection and treating it as a string
         type_selected <- ifelse(input$quizviz_type == "Other", input$custom_type, input$quizviz_type)
 
-       answers_concat <- quiz_processed() %>%
+
+        filtered_quiz <- quiz_processed()
+
+        if (input$prioritize_teachly) {
+          filtered_quiz <- filtered_quiz %>%
+            dplyr::filter(.data[["teachly"]] <= 0.5)
+        }
+
+       answers_concat <- filtered_quiz %>%
           dplyr::mutate(
             formatted_answer = paste(
               .data[[id_colname()]], ": ", .data[[input$quizviz_question]],
-              " |  ", .data[["teachly"]], # Assuming 'teachly' is the column name for Teachly scores
+              " |  ", .data[["teachly"]],
               sep = ""
             )
           ) %>%
           dplyr::pull(formatted_answer) %>%
           paste(collapse = " • ")
-
-
-       prioritize_text <- if(input$prioritize_teachly) {
-         " Prioritize those answers from students with low Teachly scores."
-       } else {
-         ""
-       }
 
 
         client <- openai::OpenAI()
@@ -134,16 +135,19 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
               "role" = "system",
               "content" = paste(
                 "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class.
-            You will do the following:
-            1. Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS. ",prioritize_text,"
 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
             [Student 1 LastName, Student 1 FirstName: Student 1 Answer | Student 1 Teachly score  • Student 2 LastName, Student 2 FirstName: Student 2 Answer| Student 2 Teachly score • ...]
 
-            Format your response strictly as follows:
+
+            You will do the following: Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.
+
+
+            Format your response in HTML format (NOT Markdown), and strictly as follows:
             <b>Quotes:</b><br>1. Answer i <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
 
             Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
+            If there are less than 5 students with answers in the list I provide, display the message 'Fewer than 5 students in the list'
                 ")
             ),
             list(
@@ -153,7 +157,8 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
 
             Answers:", answers_concat)
             )
-          )
+          ),
+          temperature = 0.4  # Adjust the temperature here (0.0 to 1.0)
         )
         shinyjs::enable("generate_analysis")
         completion$choices[[1]]$message$content
