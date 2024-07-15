@@ -133,7 +133,7 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
         labels(levels(quiz_data[[input$quizviz_question]]))
       } else {
         possible_labels <- unique(quiz_data[[input$quizviz_question]])
-        if (length(possible_labels) <= 5) {
+        if (length(possible_labels) <= 10) {
           labels(possible_labels)
         } else {
           labels(NULL)
@@ -210,7 +210,7 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
           summarize(n = n(), .groups = "drop") %>%
           ungroup()
 
-        if (n_distinct(chart[[question]]) > 5) {
+        if (n_distinct(chart[[question]]) > 10) {
           return(
             highchart() |>
               hc_title(text = "Question is not categorical. Plot cannot be made.") |>
