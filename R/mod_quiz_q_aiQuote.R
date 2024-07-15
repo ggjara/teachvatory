@@ -39,7 +39,7 @@ mod_quiz_aiQuotes_ui <- function(id) {
           label = "Prioritize Low Teachly Score",
           status = "info",
           fill = TRUE ,
-          value = TRUE
+          value = FALSE
         ),
         # Submit button
         bs4Dash::actionButton(
@@ -112,7 +112,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
 
         if (input$prioritize_teachly) {
           filtered_quiz <- filtered_quiz %>%
-            dplyr::filter(.data[["teachly"]] <= 0.5)
+            dplyr::filter(.data[["teachly"]] <= 0.5 | is.na(.data[["teachly"]]))
         }
 
        answers_concat <- filtered_quiz %>%

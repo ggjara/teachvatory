@@ -195,7 +195,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
 
         Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
-        If there are less than 5 students with answers in the list I provide, display the message 'Fewer than 5 students in the list'
+        If there are less than 5 students with answers in the list I provide, also display the message 'Fewer than 5 students in the list'
             "
           )
 
