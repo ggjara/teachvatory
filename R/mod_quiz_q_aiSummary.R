@@ -171,7 +171,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           filtered_quiz <- filtered_quiz %>%
             dplyr::filter(.data[[input$quizviz_question2]] == input$quizviz_answers2)
         }
-
+        num_answers <- length(filtered_quiz[[input$quizviz_question]])
 
           answers_concat <- filtered_quiz %>%
             dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
@@ -195,8 +195,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
 
         Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
-        If there are less than 5 students with answers in the list I provide, also display the message 'Fewer than 5 students in the list'
-            "
+        "
           )
 
 
@@ -215,8 +214,15 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           ),
           temperature = 0.5  # Adjust the temperature here (0.0 to 1.0)
         )
+        result_text <- completion$choices[[1]]$message$content
+
+        # If there are 5 or fewer answers, append the warning message
+        if (num_answers <= 5) {
+          result_text <- paste(result_text, "<br><br><b>5 or less students in the list</b>")
+        }
+
         shinyjs::enable("generate_analysis")
-        completion$choices[[1]]$message$content
+        result_text
 
       }, error = function(e) {
         shinyjs::enable("generate_analysis")
