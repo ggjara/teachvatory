@@ -115,7 +115,9 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             dplyr::filter(.data[["teachly"]] <= 0.5 | is.na(.data[["teachly"]]))
         }
 
-       answers_concat <- filtered_quiz %>%
+        num_answers <- length(filtered_quiz[[input$quizviz_question]])
+
+        answers_concat <- filtered_quiz %>%
           dplyr::mutate(
             formatted_answer = paste(
               .data[[id_colname()]], ": ", .data[[input$quizviz_question]],
@@ -147,8 +149,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             <b>Quotes:</b><br>1. Answer i <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
 
             Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
-            If there are less than 5 students with answers in the list I provide, display the message 'Fewer than 5 students in the list'
-                ")
+                           ")
             ),
             list(
               "role" = "user",
@@ -160,13 +161,21 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
           ),
           temperature = 0.4  # Adjust the temperature here (0.0 to 1.0)
         )
-        shinyjs::enable("generate_analysis")
-        completion$choices[[1]]$message$content
+        result_text <- completion$choices[[1]]$message$content
 
-        }, error = function(e){
-          "There was an error with your request. See the logs for more information."
-          shinyjs::enable("generate_analysis")
-        })
+        # If there are 5 or fewer answers, append the warning message
+        if (num_answers <= 5) {
+          result_text <- paste(result_text, "<br><br><b>5 or less students in the list</b>")
+        }
+
+
+        shinyjs::enable("generate_analysis")
+        result_text
+
+      }, error = function(e){
+        "There was an error with your request. See the logs for more information."
+        shinyjs::enable("generate_analysis")
+      })
     })
 
 
