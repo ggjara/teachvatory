@@ -220,7 +220,7 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
 
         if (show_percentage) {
           chart <- chart |>
-            mutate(n = round(n * 100 / sum(n, na.rm = TRUE), 2))
+            mutate(n = round(n * 100 / sum(n, na.rm = TRUE), 0))
         }
 
         if (use_sortable && !is.null(sorted_categories())) {
