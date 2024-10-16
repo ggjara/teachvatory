@@ -142,13 +142,12 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             [Student 1 LastName, Student 1 FirstName: Student 1 Answer | Student 1 Teachly score  • Student 2 LastName, Student 2 FirstName: Student 2 Answer| Student 2 Teachly score • ...]
 
 
-            You will do the following: Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.
-
-
-            Format your response ONLY IN HTML FORMAT (DO NOT format as Markdown), and strictly as follows:
-            <b>Quotes:</b><br>Answer i <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
-
-            Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
+            You will do the following:
+            1) Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students.
+            2) DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.Keep the students' answers VERBATIM AND COMPLETE.
+            3) Paste your response, ONLY IN HTML FORMAT (DO NOT format as Markdown), and strictly as follows:
+            <b>Quotes:</b><br> Student i's Answer <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> Student j's Answer <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
+            5) Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
                            ")
             ),
             list(
@@ -159,7 +158,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             Answers:", answers_concat)
             )
           ),
-          temperature = 0.4  # Adjust the temperature here (0.0 to 1.0)
+          temperature = 0.7  # Adjust the temperature here (0.0 to 1.0)
         )
         result_text <- completion$choices[[1]]$message$content
 

@@ -191,8 +191,8 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         1. Summarize the ", type_selected, " expressed by the students. In doing your analysis, be as thoughtful, analytical, and insightful as possible.
         2. After each point, you will list UP TO FIVE students MAX who contributed to each point.DO NOT LIST MORE THAN 5 STUDENTS.
 
-        Format your response ONLY IN HTML FORMAT (DO NOT format as Markdown), and strictly as follows:
-        <b>", type_selected, ":</b><br>Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
+        Format your response ONLY IN HTML FORMAT (DO NOT format as Markdown and DONT USE BOLD text), and strictly as follows:
+       ", type_selected, ": <br> Concept i: Answer <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
 
         Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
         "
@@ -212,7 +212,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
               "content" = question_text
             )
           ),
-          temperature = 0.5  # Adjust the temperature here (0.0 to 1.0)
+          temperature = 0.6  # Adjust the temperature here (0.0 to 1.0)
         )
         result_text <- completion$choices[[1]]$message$content
 
