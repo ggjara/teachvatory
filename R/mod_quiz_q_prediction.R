@@ -39,6 +39,20 @@ mod_quiz_prediction_ui <- function(id) {
           fill = TRUE ,
           value = TRUE
         ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_median"),
+          label = "Show Median",
+          status = "info",
+          fill = TRUE ,
+          value = FALSE
+        ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_stats"),
+          label = "Show Descriptive stats",
+          status = "info",
+          fill = TRUE ,
+          value = TRUE
+        ),
       ),
       bs4Dash::column(
         width = 8,
@@ -46,7 +60,8 @@ mod_quiz_prediction_ui <- function(id) {
           highcharter::highchartOutput(
             outputId = ns("quizviz_graph")
           )
-        )
+        ),
+        shiny::tableOutput(ns("quizviz_stats_table"))  # New table output for stats
       )
     )
   )
@@ -119,10 +134,42 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
         correct_answer = input$quizviz_correctanswer
         axispercentage = input$quizviz_axis_percentage
         axisXRange = input$quizviz_axis_XRange
+        show_median <- input$quizviz_median
         question_title <- ifelse(nchar(question)>200,
                                  paste0(substr(question, 1, 200), "..."),
                                  question)
 
+        # Calculate the median if show_median is TRUE
+        median_value <- if (show_median) {
+          median(as.numeric(quiz[[question]]), na.rm = TRUE)
+        } else {
+          NULL
+        }
+
+        descriptive_stats <- reactive({
+          shiny::req(input$quizviz_question, quiz_processed())
+
+          data <- as.numeric(quiz_processed()[[input$quizviz_question]])
+
+          # Calculate descriptive statistics
+          stats <- data.frame(
+            Statistic = c("Value"),
+            Min = c( min(data, na.rm = TRUE)),
+            p25 = c(quantile(data, 0.25, na.rm = TRUE)),
+            Mean = c(mean(data, na.rm = TRUE)),
+            Median = c( median(data, na.rm = TRUE)),
+            p75 = c(quantile(data, 0.75, na.rm = TRUE)),
+            Max = c(max(data, na.rm = TRUE)),
+            row.names = NULL  # Remove row names
+          )
+
+          stats
+        })
+        # Render the descriptive statistics table if the toggle is on
+        output$quizviz_stats_table <- shiny::renderTable({
+          shiny::req(input$quizviz_stats)  # Only show table if toggle is TRUE
+          descriptive_stats()  # Display calculated stats
+        }, rownames = FALSE)
 
         #here is predictions without percentages
         if(axispercentage == FALSE) {
@@ -140,10 +187,15 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
               hc_yAxis(labels = list(style = list(fontSize = "13px")) ) %>%
               hc_title(text=question_title, style = list(fontSize = "15px"))  %>%
               hc_xAxis(plotLines = list(
-                list( color = if (correct_answer != "") "#FF5733" else "#FFFFFF",
+                list( color = if (correct_answer != "") "#008000" else "#FFFFFF",
                       dashStyle = "Solid",
                       width = if (correct_answer != "") 3 else 0,
-                      value = correct_answer, zIndex = 10))) %>%
+                      value = correct_answer, zIndex = 10),
+                list(color = if (show_median) "#FF0000" else "#FFFFFF",
+                     dashStyle = "Dash",
+                     width = if (show_median) 2 else 0,
+                     value = median_value, zIndex = 9)  # Red dashed line for median
+                )) %>%
               hc_xAxis(
                 min = if (axisXRange) 0 else NULL, # Set min to 0 if axisXRange is TRUE
                 max = if (axisXRange) 100 else NULL) %>% # Set max to 100 if axisXRange is TRUE
@@ -192,10 +244,15 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
               ) %>%
               hc_legend(enabled = FALSE) %>%
               hc_xAxis(plotLines = list(
-                list( color = if (correct_answer != "") "#FF5733" else "#FFFFFF",
+                list( color = if (correct_answer != "") "#008000" else "#FFFFFF",
                       dashStyle = "Solid",
                       width = if (correct_answer != "") 3 else 0,
-                      value = correct_answer, zIndex = 10)))  %>%
+                      value = correct_answer, zIndex = 10),
+                list(color = if (show_median) "#FF0000" else "#FFFFFF",
+                     dashStyle = "Dash",
+                     width = if (show_median) 2 else 0,
+                     value = median_value, zIndex = 9)  # Red dashed line for median
+                ))  %>%
               hc_xAxis(
                 min = if (axisXRange) 0 else NULL, # Set min to 0 if axisXRange is TRUE
                 max = if (axisXRange) 100 else NULL) %>% # Set max to 100 if axisXRange is TRUE
