@@ -46,6 +46,11 @@ mod_quiz_prediction_ui <- function(id) {
           fill = TRUE ,
           value = FALSE
         ),
+        shiny::textInput(
+          ns("quizviz_histbreaks"),
+          label = "Histogram Breaks",
+          value = 5
+        ),
         shinyWidgets::prettySwitch(
           inputId = ns("quizviz_stats"),
           label = "Show Descriptive stats",
@@ -132,6 +137,11 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
         quiz = quiz_processed()
         question = input$quizviz_question
         correct_answer = input$quizviz_correctanswer
+        hist_breaks <- as.numeric(input$quizviz_histbreaks)
+        if (is.na(hist_breaks) || hist_breaks <= 0) {
+          hist_breaks <- 5  # Default number of breaks if input is invalid
+        }
+
         axispercentage = input$quizviz_axis_percentage
         axisXRange = input$quizviz_axis_XRange
         show_median <- input$quizviz_median
@@ -223,7 +233,7 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
             quiz %>%
               pull(question) %>%
               as.numeric() %>%
-              hist(plot = FALSE, breaks = 20) -> hist_data
+              hist(plot = FALSE, breaks = hist_breaks) -> hist_data
 
             # Calculate percentages
             hist_data$counts <- (hist_data$counts / sum(hist_data$counts)) * 100
@@ -234,7 +244,19 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
               y = hist_data$counts
             )
 
-            hchart(histogram_data, "column") %>%
+           # hchart(histogram_data, "column") %>%
+
+            highchart() %>%
+              hc_add_series(
+                data = histogram_data,
+                type = "column",      # Keep it as "column" but adjust styling below for histogram appearance
+                name = "Share of respondents",
+                pointPadding = 0,
+                groupPadding = 0,
+                borderWidth = 0
+              ) %>%
+
+
               hc_yAxis(title = list(text = "Share of respondents (%)")) %>%
               hc_xAxis(title = list(text = "Probability")) %>%
               hc_title(text=question_title, style = list(fontSize = "15px")) %>%
