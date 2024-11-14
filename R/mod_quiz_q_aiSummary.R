@@ -191,7 +191,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         1. Summarize the ", type_selected, " expressed by the students.
         2. After each point, you will list UP TO FIVE students MAX who contributed to each point.DO NOT LIST MORE THAN 5 STUDENTS.
 
-        Format your response in HTML format (NOT Markdown), and strictly as follows:
+        Format your response strictly as follows (DO NOT USE MARKDOWN):
         <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
 
         Be very careful with the names, be sure to write them as FirstName Lastname, in that order.

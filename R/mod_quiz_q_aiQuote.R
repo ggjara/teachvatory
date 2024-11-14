@@ -145,7 +145,7 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             You will do the following: Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.
 
 
-            Format your response in HTML format (NOT Markdown), and strictly as follows:
+            Format your response strictly as follows (DO NOT USE Markdown):
             <b>Quotes:</b><br>1. Answer i <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
 
             Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
