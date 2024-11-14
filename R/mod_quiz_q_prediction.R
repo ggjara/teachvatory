@@ -181,16 +181,27 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
           descriptive_stats()  # Display calculated stats
         }, rownames = FALSE)
 
+
+
+        # Assuming 'quiz' is your data frame and 'question_title' is defined
+        quiz %>%
+          pull(question) %>%
+          as.numeric() %>%
+          hist(plot = FALSE, breaks = hist_breaks) -> hist_data
+
+
         #here is predictions without percentages
         if(axispercentage == FALSE) {
           if (!is.na(correct_answer)) {
 
-            quiz %>%
-              pull(question) %>%
-              unlist() %>%
-              as.numeric() %>%
-              hchart() %>%
-              hc_legend(enabled = FALSE) %>%
+           # quiz %>%
+            #  pull(question) %>%
+             # unlist() %>%
+            #  as.numeric() %>%
+             # hchart() %>%
+             hchart(hist_data) %>%
+
+            hc_legend(enabled = FALSE) %>%
               hc_yAxis(title = list(text = "Number of respondents")) %>%
               hc_xAxis(title = list(text = "Probability")) %>%
               hc_xAxis(labels = list(style = list(fontSize = "13px")) ) %>%
@@ -228,12 +239,6 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
           #here is predictions WITH percentages
           if (!is.na(correct_answer)) {
 
-
-            # Assuming 'quiz' is your data frame and 'question_title' is defined
-            quiz %>%
-              pull(question) %>%
-              as.numeric() %>%
-              hist(plot = FALSE, breaks = hist_breaks) -> hist_data
 
             # Calculate percentages
             hist_data$counts <- (hist_data$counts / sum(hist_data$counts)) * 100
