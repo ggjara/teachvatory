@@ -39,7 +39,7 @@ mod_quiz_aiQuotes_ui <- function(id) {
           label = "Prioritize Low Teachly Score",
           status = "info",
           fill = TRUE ,
-          value = TRUE
+          value = FALSE
         ),
         # Submit button
         bs4Dash::actionButton(
@@ -112,10 +112,12 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
 
         if (input$prioritize_teachly) {
           filtered_quiz <- filtered_quiz %>%
-            dplyr::filter(.data[["teachly"]] <= 0.5)
+            dplyr::filter(.data[["teachly"]] <= 0.5 | is.na(.data[["teachly"]]))
         }
 
-       answers_concat <- filtered_quiz %>%
+        num_answers <- length(filtered_quiz[[input$quizviz_question]])
+
+        answers_concat <- filtered_quiz %>%
           dplyr::mutate(
             formatted_answer = paste(
               .data[[id_colname()]], ": ", .data[[input$quizviz_question]],
@@ -140,15 +142,13 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             [Student 1 LastName, Student 1 FirstName: Student 1 Answer | Student 1 Teachly score  • Student 2 LastName, Student 2 FirstName: Student 2 Answer| Student 2 Teachly score • ...]
 
 
-            You will do the following: Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students. Keep the students' answers verbatim and complete. DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.
-
-
-            Format your response in HTML format (NOT Markdown), and strictly as follows:
-            <b>Quotes:</b><br>1. Answer i <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> 2. Answer j <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
-
-            Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
-            If there are less than 5 students with answers in the list I provide, display the message 'Fewer than 5 students in the list'
-                ")
+            You will do the following:
+            1) Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students.
+            2) DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.Keep the students' answers VERBATIM AND COMPLETE.
+            3) Paste your response, ONLY IN HTML FORMAT (DO NOT format as Markdown), and strictly as follows:
+            <b>Quotes:</b><br> Student i's Answer <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> Student j's Answer <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
+            5) Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
+                           ")
             ),
             list(
               "role" = "user",
@@ -158,15 +158,23 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             Answers:", answers_concat)
             )
           ),
-          temperature = 0.4  # Adjust the temperature here (0.0 to 1.0)
+          temperature = 0.7  # Adjust the temperature here (0.0 to 1.0)
         )
-        shinyjs::enable("generate_analysis")
-        completion$choices[[1]]$message$content
+        result_text <- completion$choices[[1]]$message$content
 
-        }, error = function(e){
-          "There was an error with your request. See the logs for more information."
-          shinyjs::enable("generate_analysis")
-        })
+        # If there are 5 or fewer answers, append the warning message
+        if (num_answers <= 5) {
+          result_text <- paste(result_text, "<br><br><b>5 or less students in the list</b>")
+        }
+
+
+        shinyjs::enable("generate_analysis")
+        result_text
+
+      }, error = function(e){
+        "There was an error with your request. See the logs for more information."
+        shinyjs::enable("generate_analysis")
+      })
     })
 
 

@@ -171,33 +171,32 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
           filtered_quiz <- filtered_quiz %>%
             dplyr::filter(.data[[input$quizviz_question2]] == input$quizviz_answers2)
         }
+        num_answers <- length(filtered_quiz[[input$quizviz_question]])
 
+        answers_concat <- filtered_quiz %>%
+          dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
+          dplyr::pull(name_answer) %>%
+          paste(collapse = " • ")
 
-          answers_concat <- filtered_quiz %>%
-            dplyr::mutate(name_answer = paste(.data[[id_colname()]], .data[[input$quizviz_question]], sep = ": ")) %>%
-            dplyr::pull(name_answer) %>%
-            paste(collapse = " • ")
-
-          question_text <- paste0("
+        question_text <- paste0("
         Question: ", input$quizviz_question, "\n
         Answers:", answers_concat)
 
-          prompt_content <- paste(
-            "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
+        prompt_content <- paste(
+          "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class to identify main concepts in their answers and list the students who contributed to each concept.
         I will provide the question and the students' answers. The students' answers will be provided as follows:
         [Student 1 LastName, Student 1 FirstName : Student 1 Answer • Student 2 LastName, Student 2 FirstName: Student 2 Answer • ...]
 
        You will do the following:
-        1. Summarize the ", type_selected, " expressed by the students.
+        1. Summarize the ", type_selected, " expressed by the students. In doing your analysis, be as thoughtful, analytical, and insightful as possible.
         2. After each point, you will list UP TO FIVE students MAX who contributed to each point.DO NOT LIST MORE THAN 5 STUDENTS.
 
-        Format your response in HTML format (NOT Markdown), and strictly as follows:
-        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
+        Format your response ONLY IN HTML FORMAT (DO NOT format as Markdown and DONT USE BOLD text), and strictly as follows:
+       ", type_selected, ": <br> Concept i: Answer <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
 
         Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
-        If there are less than 5 students with answers in the list I provide, display the message 'Fewer than 5 students in the list'
-            "
-          )
+        "
+        )
 
 
         client <- openai::OpenAI()
@@ -213,10 +212,17 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
               "content" = question_text
             )
           ),
-          temperature = 0.5  # Adjust the temperature here (0.0 to 1.0)
+          temperature = 0.6  # Adjust the temperature here (0.0 to 1.0)
         )
+        result_text <- completion$choices[[1]]$message$content
+
+        # If there are 5 or fewer answers, append the warning message
+        if (num_answers <= 5) {
+          result_text <- paste(result_text, "<br><br><b>5 or less students in the list</b>")
+        }
+
         shinyjs::enable("generate_analysis")
-        completion$choices[[1]]$message$content
+        result_text
 
       }, error = function(e) {
         shinyjs::enable("generate_analysis")
