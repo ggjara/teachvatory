@@ -88,35 +88,45 @@ mod_metrics_ui <- function(id) {
         )))
       ),
       shiny::tabPanel(
+        shinyjs::useShinyjs(),
         title = "",
         icon = shiny::icon("user", lib = "font-awesome"),
         shiny::fluidRow(
-         bs4Dash::column(
-           width = 6,
-           shiny::sliderInput(
-             inputId = ns("n_lastquizzes"),
-             label = "Number of last quizzes missed",
-             min = 0,
-             max = 0,
-             step = 1,
-             value = 0
-           ),
-           shiny::tags$p("People who have not submitted the last ",
-                         shiny::textOutput(outputId = ns("n_lastquizzes_output"),
-                                           inline = TRUE),
-                         " quizzes."),
-           shinycssloaders::withSpinner(DT::DTOutput(ns(
-             "metrics_lastquizzes"
-           )))
-         ),
-         bs4Dash::column(
-           width = 6,
-           shinycssloaders::withSpinner(DT::DTOutput(ns(
-             "metrics_tocall"
-           )))
-         ),
+          bs4Dash::column(
+            width = 6,
+            shiny::sliderInput(
+              inputId = ns("n_lastquizzes"),
+              label = "Number of last quizzes missed",
+              min = 0,
+              max = 0,
+              step = 1,
+              value = 0
+            ),
+            shiny::tags$p("People who have not submitted the last ",
+                          shiny::textOutput(outputId = ns("n_lastquizzes_output"),
+                                            inline = TRUE),
+                          " quizzes."),
+            shinycssloaders::withSpinner(DT::DTOutput(ns(
+              "metrics_lastquizzes"
+            ))),
+            shinycssloaders::withSpinner(DT::DTOutput(ns(
+              "metrics_tocall"
+            )))
+          ),
+          bs4Dash::column(
+            width = 6,
+            textInput(ns("subject"), "Email Subject:", "Reminder: Missing Assignments"),
+            textAreaInput(
+              ns("message"),
+              "Email Message:",
+              "Dear [Name],\n\nWe have noticed that you haven’t submitted your recent assignments. Please take a moment to submit them at your earliest convenience. If you’re facing any challenges, feel free to reach out for support.\n\nBest regards,\n\nThe Teaching Team\n\nThis email is not monitored. If you have any questions, please reply directly to Professor Levy, who is cc'ed here.\n"
+            ),
+            actionButton(ns("send_email"), "Send Email"),
+            verbatimTextOutput(ns("email_status"))
+          )
         )
       )
+
     )
   )
 }
@@ -440,6 +450,85 @@ function(){
             }
           })()
       })
+
+      ## Emails -------
+      # Send email when the button is clicked
+      observeEvent(input$send_email, {
+        # Get data from metrics_lastquizzes and filter for students with total == 0
+        data <- metrics_lastquizzes()
+        missing_students <- data |>
+          dplyr::filter(total == 0) |>
+          dplyr::select(standardized_name, email_teachly, total)
+
+        # Initialize success flag, error message, and list to track sent emails
+        all_emails_sent    <- TRUE
+        last_error_message <- NULL
+        sent_students      <- list()  # List to collect names and emails of those emailed
+
+        # Check if there are students to email
+        if (nrow(missing_students) > 0) {
+          for (i in 1:nrow(missing_students)) {
+            # Extract student details
+            student_name  <- missing_students$standardized_name[i]
+            student_email <- missing_students$email_teachly[i]
+
+            # Extract first name, using entire name if there is no comma
+            name_parts <- strsplit(student_name, ",\\s*")[[1]]
+            first_name <- if (length(name_parts) > 1) name_parts[2] else student_name
+
+            # Customize the email message by replacing [Name] with the student's first name
+            email_body <- gsub("\\[Name\\]", first_name, input$message)
+
+            # Create the email
+            email <- compose_email(
+              body = md(email_body)
+            )
+
+            # Send the email with error handling
+            tryCatch({
+              smtp_send(
+                email,
+                from = "teachvatory.emails@gmail.com",
+                to = student_email,
+                cc = "dan_levy@hks.harvard.edu",
+                subject = input$subject,
+                credentials = creds_file(".secrets.emails/gmail_creds")
+              )
+              # Append to sent_students list
+              sent_students <- append(sent_students, paste(student_name, "-", student_email))
+              cat("Email sent to:", student_name, "-", student_email, "\n")
+            }, error = function(e) {
+              # Update error status and message
+              all_emails_sent <<- FALSE   # Set flag to FALSE if an error occurs
+              last_error_message <<- paste("Failed to send email to:", student_email, "Error:", e$message)
+              cat(last_error_message, "\n")
+            })
+          }
+
+          # Show confirmation modal with the list of students emailed
+          sent_students_text <- paste("Emails sent to:\n", paste(sent_students, collapse = "\n"))
+          showModal(modalDialog(
+            title = "Emails Sent Successfully",
+            tagList(pre(sent_students_text))  # Display list of students emailed with header
+          ))
+
+          # Update email status based on success flag
+          if (all_emails_sent) {
+            output$email_status <- renderText("Emails sent successfully!")
+          } else {
+            output$email_status <- renderText(last_error_message)
+          }
+        } else {
+          output$email_status <- renderText("No students to email.")
+        }
+
+        # Clear the email status after a brief delay
+        shinyjs::delay(6000, {
+          output$email_status <- renderText("")
+        })
+
+      }) # end
+
 
     })
   }

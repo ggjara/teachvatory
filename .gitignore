@@ -33,3 +33,5 @@ rsconnect/
 # MAC R Files
 .DS_Store
 .secrets
+
+.secrets.emails/gmail_creds
