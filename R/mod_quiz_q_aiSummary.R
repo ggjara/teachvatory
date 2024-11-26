@@ -15,10 +15,15 @@ mod_quiz_aiSummary_ui <- function(id) {
       bs4Dash::column(
         width = 4,
         shiny::selectInput(
+          ns("quizviz_number"),
+          "Number",
+          choices = c("1", "2",  "3", "4", "5"),
+          selected = "3"
+        ),
+        shiny::selectInput(
           ns("quizviz_analysis"),
           "Analysis",
-          choices = c("3 Main ideas", "4 Main Ideas", "5 Main Ideas",
-                      "3 Misconceptions", "4 Misconceptions", "Other"),
+          choices = c("Main ideas", "More Repeated Concepts", "Misconceptions", "Other"),
           selected = "Main ideas"
         ),
         shiny::uiOutput(ns("custom_type_input")
@@ -54,8 +59,16 @@ mod_quiz_aiSummary_ui <- function(id) {
             )
           )
         ),
-
-        # Submit button
+        shinyWidgets::prettySwitch(
+          inputId = ns("see_instruction"),
+          label = "See instruction",
+          status = "info",
+          fill = TRUE ,
+          value = FALSE
+        ),
+        shiny::textOutput(ns("instruction_text")
+        ),
+              # Submit button
         bs4Dash::actionButton(
           inputId = ns("generate_analysis"),
           label = "Generate analysis",
@@ -158,6 +171,26 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
       get_idcolname(quiz_processed())
     })
 
+    # Ensure we're correctly handling the 'Other' selection and treating it as a string
+     type_selected <- reactive({
+       if(input$quizviz_analysis == "Other") {
+         input$custom_type
+       } else {
+         input$quizviz_analysis
+       }
+     })
+
+     # Conditionally display instructional text
+     shiny::observe({
+       if (input$see_instruction) {
+         output$instruction_text <- shiny::renderText({
+           paste("Summarize the ", input$quizviz_number, " ", type_selected(), " expressed by the students.")
+         })
+       } else {
+         output$instruction_text <- shiny::renderText({ NULL })
+       }
+     })
+
     ai_response <- shiny::eventReactive(input$generate_analysis, {
       shinyjs::disable("generate_analysis")
       tryCatch({
@@ -188,7 +221,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         [Student 1 LastName, Student 1 FirstName : Student 1 Answer • Student 2 LastName, Student 2 FirstName: Student 2 Answer • ...]
 
        You will do the following:
-        1. Summarize the ", type_selected, " expressed by the students.
+        1. Summarize the ", input$quizviz_number, " ", type_selected, " expressed by the students.
         2. After each point, you will list UP TO FIVE students MAX who contributed to each point.DO NOT LIST MORE THAN 5 STUDENTS.
 
         Format your response strictly as follows (DO NOT USE MARKDOWN):

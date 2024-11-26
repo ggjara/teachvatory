@@ -23,7 +23,7 @@ mod_quiz_aiQuotes_ui <- function(id) {
         shiny::selectInput(
           ns("quizviz_type"),
           "Type",
-          choices = c("More Unique", "Funnier", "More Interesting", "Other"),
+          choices = c("More Unique", "Funnier", "More Interesting", "More Different", "More opposed (to each other)", "Other"),
           selected =  "More Interesting"
         ),
         shiny::uiOutput(ns("custom_type_input")
@@ -41,6 +41,15 @@ mod_quiz_aiQuotes_ui <- function(id) {
           fill = TRUE ,
           value = FALSE
         ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("see_instruction"),
+          label = "See instruction",
+          status = "info",
+          fill = TRUE ,
+          value = FALSE
+        ),
+        shiny::textOutput(ns("instruction_text")
+      ),
         # Submit button
         bs4Dash::actionButton(
           inputId = ns("generate_analysis"),
@@ -95,6 +104,28 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
         output$custom_type_input <- shiny::renderUI({ NULL }) # Render nothing if not "Other"
       }
     })
+
+    # Ensure we're correctly handling the 'Other' selection and treating it as a string
+    type_selected <- reactive({
+      if(input$quizviz_type == "Other") {
+        input$custom_type
+      } else {
+        input$quizviz_type
+      }
+    })
+    # Conditionally display instructional text
+    shiny::observe({
+  if (input$see_instruction) {
+    output$instruction_text <- shiny::renderText({
+      paste("Identify the", input$quizviz_analysis, type_selected(), "answers expressed by the students")
+    })
+  } else {
+    output$instruction_text <- shiny::renderText({ NULL })
+  }
+})
+
+
+
 
     # Get colname of "Your Name" input. If doesn't exist, return ""
     id_colname <- shiny::reactive({

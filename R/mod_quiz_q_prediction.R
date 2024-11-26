@@ -249,7 +249,6 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
               y = hist_data$counts
             )
 
-           # hchart(histogram_data, "column") %>%
 
             highchart() %>%
               hc_add_series(
@@ -260,7 +259,6 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
                 groupPadding = 0,
                 borderWidth = 0
               ) %>%
-
 
               hc_yAxis(title = list(text = "Share of respondents (%)")) %>%
               hc_xAxis(title = list(text = "Probability")) %>%
