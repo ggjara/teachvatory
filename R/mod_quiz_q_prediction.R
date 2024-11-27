@@ -194,11 +194,6 @@ mod_quiz_prediction_server <- function(id, stringAsFactors = FALSE, main_inputs,
         if(axispercentage == FALSE) {
           if (!is.na(correct_answer)) {
 
-           # quiz %>%
-            #  pull(question) %>%
-             # unlist() %>%
-            #  as.numeric() %>%
-             # hchart() %>%
              hchart(hist_data) %>%
 
             hc_legend(enabled = FALSE) %>%
