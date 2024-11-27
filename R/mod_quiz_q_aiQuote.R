@@ -113,11 +113,20 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
         input$quizviz_type
       }
     })
+
+    shiny::observeEvent(input$quizviz_type, {
+      shinyWidgets::updatePrettySwitch(
+        session,
+        inputId = "see_instruction",
+        value = (input$quizviz_type == "Other")
+      )
+    })
+
     # Conditionally display instructional text
     shiny::observe({
   if (input$see_instruction) {
     output$instruction_text <- shiny::renderText({
-      paste("Identify the", input$quizviz_analysis, type_selected(), "answers expressed by the students")
+      paste("Instruction: Identify the", input$quizviz_analysis, type_selected(), "answers expressed by the students")
     })
   } else {
     output$instruction_text <- shiny::renderText({ NULL })

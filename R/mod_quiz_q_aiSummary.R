@@ -23,7 +23,7 @@ mod_quiz_aiSummary_ui <- function(id) {
         shiny::selectInput(
           ns("quizviz_analysis"),
           "Analysis",
-          choices = c("Main ideas", "More Repeated Concepts", "Misconceptions", "Other"),
+          choices = c("Main ideas", "Most Repeated Concepts", "Misconceptions", "Other"),
           selected = "Main ideas"
         ),
         shiny::uiOutput(ns("custom_type_input")
@@ -184,11 +184,19 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
      shiny::observe({
        if (input$see_instruction) {
          output$instruction_text <- shiny::renderText({
-           paste("Summarize the ", input$quizviz_number, " ", type_selected(), " expressed by the students.")
+           paste("Instruction: Summarize the ", input$quizviz_number, " ", type_selected(), " expressed by the students.")
          })
        } else {
          output$instruction_text <- shiny::renderText({ NULL })
        }
+     })
+
+     shiny::observeEvent(input$quizviz_analysis, {
+       shinyWidgets::updatePrettySwitch(
+         session,
+         inputId = "see_instruction",
+         value = (input$quizviz_analysis == "Other")
+       )
      })
 
     ai_response <- shiny::eventReactive(input$generate_analysis, {
