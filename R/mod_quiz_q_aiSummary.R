@@ -229,11 +229,12 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         [Student 1 LastName, Student 1 FirstName : Student 1 Answer • Student 2 LastName, Student 2 FirstName: Student 2 Answer • ...]
 
        You will do the following:
-        1. Summarize the ", input$quizviz_number, " ", type_selected, " expressed by the students.
+
+        1. Summarize the ", input$quizviz_number, " ", type_selected, " expressed by the students. In doing your analysis, be as thoughtful, analytical, and insightful as possible.
         2. After each point, you will list UP TO FIVE students MAX who contributed to each point.DO NOT LIST MORE THAN 5 STUDENTS.
 
-        Format your response strictly as follows (DO NOT USE MARKDOWN):
-        <b>", type_selected, ":</b><br>1. Idea 1 <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
+         Format your response strictly as follows (DO NOT USE MARKDOWN and DONT USE BOLD text):
+       ", type_selected, ": <br> Concept i: Answer <br> (<i>Student i FirstName LastName; Student j FirstName LastName; ...</i>)<br><br>
 
         Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
         "
@@ -253,7 +254,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
               "content" = question_text
             )
           ),
-          temperature = 0.5  # Adjust the temperature here (0.0 to 1.0)
+          temperature = 0.6  # Adjust the temperature here (0.0 to 1.0)
         )
         result_text <- completion$choices[[1]]$message$content
 
