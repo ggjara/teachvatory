@@ -23,7 +23,7 @@ mod_quiz_aiQuotes_ui <- function(id) {
         shiny::selectInput(
           ns("quizviz_type"),
           "Type",
-          choices = c("More Unique", "Funnier", "More Interesting", "Other"),
+          choices = c("More Unique", "Funnier", "More Interesting", "More Different", "More opposed (to each other)", "Other"),
           selected =  "More Interesting"
         ),
         shiny::uiOutput(ns("custom_type_input")
@@ -41,6 +41,15 @@ mod_quiz_aiQuotes_ui <- function(id) {
           fill = TRUE ,
           value = FALSE
         ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("see_instruction"),
+          label = "See instruction",
+          status = "info",
+          fill = TRUE ,
+          value = FALSE
+        ),
+        shiny::textOutput(ns("instruction_text")
+      ),
         # Submit button
         bs4Dash::actionButton(
           inputId = ns("generate_analysis"),
@@ -96,6 +105,37 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
       }
     })
 
+    # Ensure we're correctly handling the 'Other' selection and treating it as a string
+    type_selected <- reactive({
+      if(input$quizviz_type == "Other") {
+        input$custom_type
+      } else {
+        input$quizviz_type
+      }
+    })
+
+    shiny::observeEvent(input$quizviz_type, {
+      shinyWidgets::updatePrettySwitch(
+        session,
+        inputId = "see_instruction",
+        value = (input$quizviz_type == "Other")
+      )
+    })
+
+    # Conditionally display instructional text
+    shiny::observe({
+  if (input$see_instruction) {
+    output$instruction_text <- shiny::renderText({
+      paste("Instruction: Identify the", input$quizviz_analysis, type_selected(), "answers expressed by the students")
+    })
+  } else {
+    output$instruction_text <- shiny::renderText({ NULL })
+  }
+})
+
+
+
+
     # Get colname of "Your Name" input. If doesn't exist, return ""
     id_colname <- shiny::reactive({
       get_idcolname(quiz_processed())
@@ -142,10 +182,11 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             [Student 1 LastName, Student 1 FirstName: Student 1 Answer | Student 1 Teachly score  • Student 2 LastName, Student 2 FirstName: Student 2 Answer| Student 2 Teachly score • ...]
 
 
+
             You will do the following:
             1) Identify the ", input$quizviz_analysis, " ", type_selected, "  answers expressed by the students.
-            2) DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS.Keep the students' answers VERBATIM AND COMPLETE.
-            3) Paste your response, ONLY IN HTML FORMAT (DO NOT format as Markdown), and strictly as follows:
+            2) DO NOT SELECT MORE THAN ", input$quizviz_analysis, " ANSWERS. Keep the students' answers VERBATIM AND COMPLETE.
+            3) Format your response strictly as follows (DO NOT USE Markdown):
             <b>Quotes:</b><br> Student i's Answer <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> Student j's Answer <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
             5) Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
                            ")
