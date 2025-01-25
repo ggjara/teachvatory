@@ -129,8 +129,23 @@ mod_quiz_ui <- function(id) {
               )
             )
           )
+          ),
+          shiny::fluidRow(
+            column(
+              width = 12,
+              shiny::actionButton(
+                inputId = ns("export_selection"),
+                label = "Export Selection to Excel",
+                icon = shiny::icon("file-excel")
+              ),
+              shiny::downloadButton(
+                outputId = ns("download_excel"),
+                label = "",
+                style = "display: none;"
+              )
+            )
+          )
         )
-      )
     ),
     # New fluidRow for displaying all answers of the loaded quiz
     shiny::fluidRow(
@@ -539,7 +554,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         rownames = FALSE,
         style = "bootstrap4",
         filter = "top",
-        selection = "none",
+        selection = "multiple",
         options = list(
           pageLength = 100,
           autowidth = TRUE,
@@ -556,6 +571,40 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       dt
 
     })
+
+    # Add observeEvent for exporting selected rows
+    observeEvent(input$export_selection, {
+      selected_rows <- input$quiz_table_rows_selected  # Get selected row indices
+      print(colnames(quiz_processed()))  # Debugging: Check column names
+
+
+      if (length(selected_rows) > 0) {
+        # Filter the data to get selected rows
+        selected_data <- quiz_processed()[selected_rows, ]%>%
+          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+
+        # Create a temporary Excel file
+        temp_file <- tempfile(fileext = ".xlsx")
+        writexl::write_xlsx(selected_data, temp_file)
+        browseURL(temp_file)
+        # Set up download handler
+        output$download_excel <- downloadHandler(
+          filename = function() {
+            paste0("Selected_Rows_", Sys.Date(), ".xlsx")
+          },
+          content = function(file) {
+            file.copy(temp_file, file)
+          }
+        )
+
+        # Trigger download programmatically
+        shinyjs::runjs("$('#download_excel')[0].click();")
+      } else {
+        # Notify if no rows are selected
+        showNotification("No rows selected for export!", type = "error")
+      }
+    })
+
 
     # New output for rendering all quiz answers
     output$all_quiz_answers <- DT::renderDT({
@@ -597,7 +646,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         rownames = FALSE,
         style = "bootstrap4",
         filter = "top",
-        selection = "none",
+        selection = "multiple",
         options = list(
           pageLength = 100,
           autowidth = TRUE,
