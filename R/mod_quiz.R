@@ -575,8 +575,6 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     # Add observeEvent for exporting selected rows
     observeEvent(input$export_selection, {
       selected_rows <- input$quiz_table_rows_selected  # Get selected row indices
-      print(colnames(quiz_processed()))  # Debugging: Check column names
-
 
       if (length(selected_rows) > 0) {
         # Filter the data to get selected rows
