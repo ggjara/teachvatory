@@ -11,6 +11,7 @@
 mod_quiz_ui <- function(id) {
   ns <- NS(id)
   tagList(
+    shinyjs::useShinyjs(),
     shiny::fluidRow(
       bs4Dash::box(
         id = ns("box_filter"),
@@ -142,6 +143,11 @@ mod_quiz_ui <- function(id) {
                 outputId = ns("download_excel"),
                 label = "",
                 style = "display: none;"
+              ),
+              shiny::actionButton(
+                inputId = ns("copy_to_clipboard"),
+                label = "Copy to Clipboard",
+                icon = shiny::icon("clipboard")
               )
             )
           )
@@ -602,6 +608,46 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         showNotification("No rows selected for export!", type = "error")
       }
     })
+
+    observeEvent(input$copy_to_clipboard, {
+      selected_rows <- input$quiz_table_rows_selected
+      if (length(selected_rows) > 0) {
+        # Select only the relevant columns: Name + selected crosstab questions
+        selected_data <- quiz_processed()[selected_rows, ] %>%
+          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+
+        # Convert to tab-separated values (TSV) for clipboard pasting
+        clipboard_text <- paste(
+          apply(selected_data, 1, function(row) paste(row, collapse = "\t")),
+          collapse = "\n"
+        )
+
+        print(clipboard_text)  # Debugging: Check if text is formatted correctly in the R console
+
+        # JavaScript code to insert text into a hidden textarea, select it, and copy it
+        js_code <- sprintf("
+      var textarea = document.createElement('textarea');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = 0;
+      textarea.value = `%s`;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      Shiny.setInputValue('%s', 'success');
+    ", clipboard_text, session$ns("clipboard_status"))
+
+        shinyjs::runjs(js_code)
+
+        showNotification("Selected rows copied to clipboard!", type = "message")
+
+      } else {
+        showNotification("No rows selected for copying!", type = "error")
+      }
+    })
+
+
+
 
 
     # New output for rendering all quiz answers
