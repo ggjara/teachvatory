@@ -148,6 +148,11 @@ mod_quiz_ui <- function(id) {
                 inputId = ns("copy_to_clipboard"),
                 label = "Copy to Clipboard",
                 icon = shiny::icon("clipboard")
+              ),
+              shiny::actionButton(
+                inputId = ns("toggle_show_selected"),
+                label = "Show Selected Only",
+                icon = shiny::icon("eye")
               )
             )
           )
@@ -305,6 +310,21 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       students_list_modal(data_to_show,
                           title = "Students in roster")
     })
+
+
+    ##For filter by selection in table
+    selected_rows_f <- reactiveVal(c())  # Stores selected row indices
+    show_selected <- reactiveVal(FALSE)  # Tracks whether to show only selected rows
+
+    observeEvent(input$quiz_table_rows_selected, {
+      selected_rows_f(input$quiz_table_rows_selected)  # Store selected rows persistently
+    })
+
+    observeEvent(input$toggle_show_selected, {
+      show_selected(!show_selected())  # Toggle filtering state
+    })
+
+
     ####### End Reactive Values #######
 
     ####### Modals #######
@@ -548,8 +568,16 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         )
       }
 
+      data_to_show <- quiz_processed()
+
+      # If "Show Selected" is enabled, filter only selected rows
+      if (show_selected() && length(selected_rows_f()) > 0) {
+        data_to_show <- data_to_show[selected_rows_f(), ]
+      }
+
+
       dt <- DT::datatable(
-        quiz_processed() %>%
+        data_to_show %>%
           dplyr::select(cols_toselect) %>%
           data.table::setnames(
             old = cols_toselect,
@@ -622,7 +650,6 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           collapse = "\n"
         )
 
-        print(clipboard_text)  # Debugging: Check if text is formatted correctly in the R console
 
         # JavaScript code to insert text into a hidden textarea, select it, and copy it
         js_code <- sprintf("
