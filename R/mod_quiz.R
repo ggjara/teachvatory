@@ -153,7 +153,13 @@ mod_quiz_ui <- function(id) {
                 inputId = ns("toggle_show_selected"),
                 label = "Show Selected Only",
                 icon = shiny::icon("eye")
+              ),
+              shiny::actionButton(
+                inputId = ns("return_to_og"),
+                label = "Return to OG Table",
+                icon = shiny::icon("undo")
               )
+
             )
           )
         )
@@ -321,7 +327,16 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     })
 
     observeEvent(input$toggle_show_selected, {
-      show_selected(!show_selected())  # Toggle filtering state
+      show_selected(TRUE)  # Set to TRUE when button is pressed
+
+      # Capture selected rows and store them persistently
+      if (length(selected_rows_f()) > 0) {
+        selected_table_data(quiz_processed()[selected_rows_f(), ])  # Store table once
+      }
+    })
+
+    observeEvent(input$return_to_og, {
+      selected_table_data(NULL)  # Reset back to the full table
     })
 
 
@@ -536,6 +551,9 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     #     hc_add_theme(hc_theme_smpl())
     # })
 
+    selected_table_data <- reactiveVal(NULL)  # Stores filtered table only once
+
+
     output$quiz_table <- DT::renderDT({
       shiny::req(quiz_processed())
       shiny::validate(
@@ -568,12 +586,12 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         )
       }
 
-      data_to_show <- quiz_processed()
+      data_to_show <- selected_table_data()  # Use stored table after "Show Selected Only" is clicked
 
-      # If "Show Selected" is enabled, filter only selected rows
-      if (show_selected() && length(selected_rows_f()) > 0) {
-        data_to_show <- data_to_show[selected_rows_f(), ]
+      if (is.null(data_to_show)) {
+        data_to_show <- quiz_processed()  # Default to full table
       }
+
 
 
       dt <- DT::datatable(
