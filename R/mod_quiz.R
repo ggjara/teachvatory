@@ -327,17 +327,20 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     })
 
     observeEvent(input$toggle_show_selected, {
-      show_selected(TRUE)  # Set to TRUE when button is pressed
-
-      # Capture selected rows and store them persistently
+      show_selected(TRUE)
       if (length(selected_rows_f()) > 0) {
-        selected_table_data(quiz_processed()[selected_rows_f(), ])  # Store table once
+        selected_table_data(quiz_processed()[selected_rows_f(), ])
+      } else {
+        showNotification("No rows selected!", type = "warning")
       }
     })
 
+
     observeEvent(input$return_to_og, {
-      selected_table_data(NULL)  # Reset back to the full table
+      show_selected(FALSE)  # Reset the toggle state
+      selected_table_data(NULL)
     })
+
 
 
     ####### End Reactive Values #######
@@ -586,7 +589,12 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         )
       }
 
-      data_to_show <- selected_table_data()  # Use stored table after "Show Selected Only" is clicked
+      data_to_show <- quiz_processed()  # Always pull fresh data
+
+      if (show_selected() && !is.null(selected_table_data())) {
+        data_to_show <- selected_table_data()  # Use stored selection if "Show Selected" is active
+      }
+
 
       if (is.null(data_to_show)) {
         data_to_show <- quiz_processed()  # Default to full table
