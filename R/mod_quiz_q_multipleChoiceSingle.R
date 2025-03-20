@@ -39,6 +39,22 @@ mod_quiz_multipleChoiceSingle_ui <- function(id) {
           status = "info",
           fill = TRUE
         ),
+        # New toggle for showing title.
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_show_title"),
+          label = "Show Title",
+          status = "info",
+          fill = TRUE,
+          value = FALSE
+        ),
+        shiny::conditionalPanel(
+          condition = paste0("input['", ns("quizviz_show_title"), "'] == true"),
+          shiny::textInput(
+            inputId = ns("quizviz_custom_title"),
+            label = "Custom Title (Leave empty for default)",
+            placeholder = "Enter chart title..."
+          )
+        ),
         shinyWidgets::prettySwitch(
           inputId = ns("quizviz_use_sortable"),
           label = "Use sortable",
@@ -273,7 +289,9 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
           })() |>
           hc_plotOptions(series = list(stacking = "normal", dataLabels = list(enabled = TRUE, formatter = JS(paste0("function() { return this.y + '", char_extra, "'; }"))))) |>
           hc_legend(enabled = FALSE) |>
-          hc_title(text = question_title) |>
+          hc_title(text = if (input$quizviz_show_title) {
+            if (nzchar(input$quizviz_custom_title)) input$quizviz_custom_title else question_title
+          } else NULL) |>  # Custom or Default Title Logic
           hc_exporting(
             enabled = TRUE,
             filename = paste0("viz_", substr(question, 1, 20)),
