@@ -11,6 +11,7 @@
 mod_quiz_ui <- function(id) {
   ns <- NS(id)
   tagList(
+    shinyjs::useShinyjs(),
     shiny::fluidRow(
       bs4Dash::box(
         id = ns("box_filter"),
@@ -133,8 +134,39 @@ mod_quiz_ui <- function(id) {
               )
             )
           )
+          ),
+          shiny::fluidRow(
+            column(
+              width = 12,
+              shiny::actionButton(
+                inputId = ns("export_selection"),
+                label = "Export Selection to Excel",
+                icon = shiny::icon("file-excel")
+              ),
+              shiny::downloadButton(
+                outputId = ns("download_excel"),
+                label = "",
+                style = "display: none;"
+              ),
+              shiny::actionButton(
+                inputId = ns("copy_to_clipboard"),
+                label = "Copy to Clipboard",
+                icon = shiny::icon("clipboard")
+              ),
+              shiny::actionButton(
+                inputId = ns("toggle_show_selected"),
+                label = "Show Selected Only",
+                icon = shiny::icon("eye")
+              ),
+              shiny::actionButton(
+                inputId = ns("return_to_og"),
+                label = "Return to OG Table",
+                icon = shiny::icon("undo")
+              )
+
+            )
+          )
         )
-      )
     ),
     # New fluidRow for displaying all answers of the loaded quiz
     shiny::fluidRow(
@@ -288,6 +320,33 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       students_list_modal(data_to_show,
                           title = "Students in roster")
     })
+
+
+    ##For filter by selection in table
+    selected_rows_f <- reactiveVal(c())  # Stores selected row indices
+    show_selected <- reactiveVal(FALSE)  # Tracks whether to show only selected rows
+
+    observeEvent(input$quiz_table_rows_selected, {
+      selected_rows_f(input$quiz_table_rows_selected)  # Store selected rows persistently
+    })
+
+    observeEvent(input$toggle_show_selected, {
+      show_selected(TRUE)
+      if (length(selected_rows_f()) > 0) {
+        selected_table_data(quiz_processed()[selected_rows_f(), ])
+      } else {
+        showNotification("No rows selected!", type = "warning")
+      }
+    })
+
+
+    observeEvent(input$return_to_og, {
+      show_selected(FALSE)  # Reset the toggle state
+      selected_table_data(NULL)
+    })
+
+
+
     ####### End Reactive Values #######
 
     ####### Modals #######
@@ -499,6 +558,9 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     #     hc_add_theme(hc_theme_smpl())
     # })
 
+    selected_table_data <- reactiveVal(NULL)  # Stores filtered table only once
+
+
     output$quiz_table <- DT::renderDT({
       shiny::req(quiz_processed())
       shiny::validate(
@@ -531,8 +593,21 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         )
       }
 
+      data_to_show <- quiz_processed()  # Always pull fresh data
+
+      if (show_selected() && !is.null(selected_table_data())) {
+        data_to_show <- selected_table_data()  # Use stored selection if "Show Selected" is active
+      }
+
+
+      if (is.null(data_to_show)) {
+        data_to_show <- quiz_processed()  # Default to full table
+      }
+
+
+
       dt <- DT::datatable(
-        quiz_processed() %>%
+        data_to_show %>%
           dplyr::select(cols_toselect) %>%
           data.table::setnames(
             old = cols_toselect,
@@ -543,7 +618,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         rownames = FALSE,
         style = "bootstrap4",
         filter = "top",
-        selection = "none",
+        selection = "multiple",
         options = list(
           pageLength = 100,
           autowidth = TRUE,
@@ -560,6 +635,77 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       dt
 
     })
+
+    # Add observeEvent for exporting selected rows
+    observeEvent(input$export_selection, {
+      selected_rows <- input$quiz_table_rows_selected  # Get selected row indices
+
+      if (length(selected_rows) > 0) {
+        # Filter the data to get selected rows
+        selected_data <- quiz_processed()[selected_rows, ]%>%
+          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+
+        # Create a temporary Excel file
+        temp_file <- tempfile(fileext = ".xlsx")
+        writexl::write_xlsx(selected_data, temp_file)
+        browseURL(temp_file)
+        # Set up download handler
+        output$download_excel <- downloadHandler(
+          filename = function() {
+            paste0("Selected_Rows_", Sys.Date(), ".xlsx")
+          },
+          content = function(file) {
+            file.copy(temp_file, file)
+          }
+        )
+
+        # Trigger download programmatically
+        shinyjs::runjs("$('#download_excel')[0].click();")
+      } else {
+        # Notify if no rows are selected
+        showNotification("No rows selected for export!", type = "error")
+      }
+    })
+
+    observeEvent(input$copy_to_clipboard, {
+      selected_rows <- input$quiz_table_rows_selected
+      if (length(selected_rows) > 0) {
+        # Select only the relevant columns: Name + selected crosstab questions
+        selected_data <- quiz_processed()[selected_rows, ] %>%
+          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+
+        # Convert to tab-separated values (TSV) for clipboard pasting
+        clipboard_text <- paste(
+          apply(selected_data, 1, function(row) paste(row, collapse = "\t")),
+          collapse = "\n"
+        )
+
+
+        # JavaScript code to insert text into a hidden textarea, select it, and copy it
+        js_code <- sprintf("
+      var textarea = document.createElement('textarea');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = 0;
+      textarea.value = `%s`;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      Shiny.setInputValue('%s', 'success');
+    ", clipboard_text, session$ns("clipboard_status"))
+
+        shinyjs::runjs(js_code)
+
+        showNotification("Selected rows copied to clipboard!", type = "message")
+
+      } else {
+        showNotification("No rows selected for copying!", type = "error")
+      }
+    })
+
+
+
+
 
     # New output for rendering all quiz answers
     output$all_quiz_answers <- DT::renderDT({
@@ -601,7 +747,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         rownames = FALSE,
         style = "bootstrap4",
         filter = "top",
-        selection = "none",
+        selection = "multiple",
         options = list(
           pageLength = 100,
           autowidth = TRUE,
