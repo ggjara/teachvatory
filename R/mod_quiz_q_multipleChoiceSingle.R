@@ -7,7 +7,7 @@
 #' @noRd
 #'
 #' @importFrom shiny NS tagList
-#' @import highcharter sortable
+#' @import highcharter dplyr sortable
 mod_quiz_multipleChoiceSingle_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -39,7 +39,6 @@ mod_quiz_multipleChoiceSingle_ui <- function(id) {
           status = "info",
           fill = TRUE
         ),
-        # New toggle for showing title.
         shinyWidgets::prettySwitch(
           inputId = ns("quizviz_show_title"),
           label = "Show Title",
@@ -60,6 +59,29 @@ mod_quiz_multipleChoiceSingle_ui <- function(id) {
           label = "Use sortable",
           status = "info",
           fill = TRUE
+        ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_flip_axis"),
+          label = "Flip Axis",
+          status = "info",
+          fill = TRUE,
+          value = FALSE
+        ),
+        shinyWidgets::prettySwitch(
+          inputId = ns("quizviz_enable_comparison"),
+          label = "Compare with another question?",
+          status = "info",
+          fill = TRUE,
+          value = FALSE
+        ),
+        conditionalPanel(
+          condition = paste0("input['", ns("quizviz_enable_comparison"), "'] == true"),
+          shiny::selectInput(
+            ns("quizviz_question2"),
+            "Select Group Variable",
+            choices = c(""),
+            selected = NULL
+          )
         ),
         conditionalPanel(
           condition = paste0("input['", ns("quizviz_use_sortable"), "'] == true"),
@@ -184,6 +206,12 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
         choices = unique(questions()),
         selected = unique(questions())[1]
       )
+      shiny::updateSelectInput(
+        session,
+        inputId = "quizviz_question2",
+        choices = unique(questions()),
+        selected = NULL
+      )
     })
 
     shiny::observeEvent(answers(), {
@@ -207,24 +235,57 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
       tryCatch({
         quiz <- quiz_processed()
         question <- input$quizviz_question
+        question2 <- input$quizviz_question2
         correct_answer <- input$quizviz_correctanswer
         arrange_by_frequency <- input$quizviz_arrange_by_frequency
         use_sortable <- input$quizviz_use_sortable
         show_percentage <- input$quizviz_show_percentage
+        flip_axis <- input$quizviz_flip_axis
+        enable_comparison <- input$quizviz_enable_comparison
         char_extra <- if (show_percentage) "%" else ""
 
         print(paste("Use sortable:", use_sortable))
         print(paste("Sorted categories:", sorted_categories()))
 
-        chart <- quiz %>%
-          mutate(!!question := as.character(.data[[question]])) %>%
-          mutate(!!question := case_when(
-            is.na(.data[[question]]) ~ "No answer",
-            TRUE ~ .data[[question]],
-          )) %>%
-          group_by(!!rlang::sym(question)) %>%
-          summarize(n = n(), .groups = "drop") %>%
-          ungroup()
+        # Prepare data based on comparison toggle
+        if (!enable_comparison || is.null(question2)) {
+          # Single Question Frequency Calculation
+          chart <- quiz %>%
+            mutate(!!question := as.character(.data[[question]])) %>%
+            mutate(!!question := case_when(
+              is.na(.data[[question]]) ~ "No answer",
+              TRUE ~ .data[[question]],
+            )) %>%
+            group_by(!!rlang::sym(question)) %>%
+            summarize(n = n(), .groups = "drop") %>%
+            ungroup()
+        } else {
+          # Crosstabulation - Group by question2 and count question1
+          chart <- quiz %>%
+            mutate(!!question := as.character(.data[[question]])) %>%
+            mutate(!!question := case_when(
+              is.na(.data[[question]]) ~ "No answer",
+              TRUE ~ .data[[question]],
+            )) %>%
+            group_by(!!rlang::sym(question2)) %>%
+            count(!!rlang::sym(question)) %>%
+            mutate(
+              percentage = round(n / sum(n) * 100, 1)
+            ) %>%
+            ungroup()
+        }
+
+        # If comparison is enabled, check `question2`
+        if (enable_comparison && !is.null(question2)) {
+          # Check if question2 has more than 10 categories
+          if (n_distinct(chart[[question2]], na.rm = TRUE) > 10) {
+            return(
+              highchart() |>
+                hc_title(text = "Grouping variable has too many categories. Please select another.") |>
+                hc_add_theme(hc_theme_smpl())
+            )
+          }
+        }
 
         if (n_distinct(chart[[question]]) > 10) {
           return(
@@ -274,33 +335,67 @@ mod_quiz_multipleChoiceSingle_server <- function(id, stringAsFactors = FALSE, ma
           x_categories[x_categories == "1" | x_categories == "TRUE"] <- "TRUE"
         }
 
-        highchart(type = "chart") |>
-          hc_xAxis(categories = x_categories, labels = list(style = list(fontSize = '18px'))) |>
-          hc_yAxis(labels = list(style = list(fontSize = '18px'))) |>
-          (\(.) {
-            if (correct_answer == "No correct answer") {
-              . |>
-                hc_add_series(type = 'bar', data = chart[['n']], color = COLOR_DEFAULT, name = "Responses")
-            } else {
-              . |>
-                hc_add_series(type = 'bar', data = chart[['n_correct']], color = COLOR_GREEN, name = "Correct") |>
-                hc_add_series(type = 'bar', data = chart[['n_incorrect']], color = COLOR_DEFAULT, name = "Incorrect")
-            }
-          })() |>
-          hc_plotOptions(series = list(stacking = "normal", dataLabels = list(enabled = TRUE, formatter = JS(paste0("function() { return this.y + '", char_extra, "'; }"))))) |>
-          hc_legend(enabled = FALSE) |>
-          hc_title(text = if (input$quizviz_show_title) {
-            if (nzchar(input$quizviz_custom_title)) input$quizviz_custom_title else question_title
-          } else NULL) |>  # Custom or Default Title Logic
-          hc_exporting(
-            enabled = TRUE,
-            filename = paste0("viz_", substr(question, 1, 20)),
-            chartOptions = list(
-              chart = list(style = list(fontFamily = 'Arial, sans-serif')),
-              title = list(style = list(fontFamily = 'Arial, sans-serif'))
-            )
+        # Prepare chart based on comparison toggle
+        if (enable_comparison && !is.null(question2)) {
+          # Comparison Chart
+          group_var <- sym(question2)
+          base_chart <- hchart(
+            chart,
+            type = ifelse(flip_axis, "bar", "column"),
+            hcaes(x = !!sym(question), y = percentage, group = !!group_var)
           ) |>
-          hc_add_theme(hc_theme_smpl())
+            hc_xAxis(title = list(text = NULL)) |>
+            hc_yAxis(title = list(text = "Proportion (%)"), labels = list(format = "{value}%")) |>
+            hc_title(text = question_title) |>
+            hc_plotOptions(
+              series = list(
+                dataLabels = list(
+                  enabled = TRUE,
+                  format = "{point.y:.2f}%",
+                  verticalAlign = "top",
+                  inside = FALSE
+                )
+              )
+            ) |>
+            hc_exporting(
+              enabled = TRUE,
+              filename = paste0("viz_", substr(question, 1, 20)),
+              chartOptions = list(
+                chart = list(style = list(fontFamily = 'Arial, sans-serif')),
+                title = list(style = list(fontFamily = 'Arial, sans-serif'))
+              )
+            ) |>
+            hc_add_theme(hc_theme_smpl())
+        } else {
+          # Single Question Chart
+          highchart() |>
+            hc_xAxis(categories = x_categories, labels = list(style = list(fontSize = '18px'))) |>
+            hc_yAxis(labels = list(style = list(fontSize = '18px'))) |>
+            (\(.) {
+              if (correct_answer == "No correct answer") {
+                . |>
+                  hc_add_series(type = ifelse(flip_axis, "column", "bar"), data = chart[['n']], color = COLOR_DEFAULT, name = "Responses")
+              } else {
+                . |>
+                  hc_add_series(type = ifelse(flip_axis, "column", "bar"), data = chart[['n_correct']], color = COLOR_GREEN, name = "Correct") |>
+                  hc_add_series(type = ifelse(flip_axis, "column", "bar"), data = chart[['n_incorrect']], color = COLOR_DEFAULT, name = "Incorrect")
+              }
+            })() |>
+            hc_plotOptions(series = list(stacking = "normal", dataLabels = list(enabled = TRUE, formatter = JS(paste0("function() { return this.y + '", char_extra, "'; }"))))) |>
+            hc_legend(enabled = FALSE) |>
+            hc_title(text = if (input$quizviz_show_title) {
+              if (nzchar(input$quizviz_custom_title)) input$quizviz_custom_title else question_title
+            } else NULL) |>
+            hc_exporting(
+              enabled = TRUE,
+              filename = paste0("viz_", substr(question, 1, 20)),
+              chartOptions = list(
+                chart = list(style = list(fontFamily = 'Arial, sans-serif')),
+                title = list(style = list(fontFamily = 'Arial, sans-serif'))
+              )
+            ) |>
+            hc_add_theme(hc_theme_smpl())
+        }
       }, error = function(e) {
         message("Error in rendering chart: ", e$message)
         NULL
