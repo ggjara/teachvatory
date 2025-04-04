@@ -82,11 +82,11 @@ mod_quiz_ui <- function(id) {
          shiny::tabPanel(
           title = "Crosstab",
           mod_quiz_crosstab_ui(ns("quiz_Crosstab_1"))
-        ),
-        shiny::tabPanel(
-          title = "Bar Plot",
-          mod_quiz_crossBarPlot_ui(ns("quiz_crossBarPlot_1"))
         )
+        # shiny::tabPanel(
+        #   title = "Bar Plot",
+        #   mod_quiz_crossBarPlot_ui(ns("quiz_crossBarPlot_1"))
+        # )
       )
     ),
     shiny::fluidRow(
@@ -627,7 +627,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     mod_quiz_aiSummary_server("quiz_aiSummary_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_aiQuotes_server("quiz_aiQuotes_1", FALSE, main_inputs, quiz_processed)
     mod_quiz_crosstab_server("quiz_Crosstab_1", FALSE, main_inputs, quiz_processed)
-    mod_quiz_crossBarPlot_server("quiz_crossBarPlot_1", FALSE, main_inputs, quiz_processed)
+    # Remove for now the bar plot
+    # mod_quiz_crossBarPlot_server("quiz_crossBarPlot_1", FALSE, main_inputs, quiz_processed)
     ####### End Render #######
 
     # output
