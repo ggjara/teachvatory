@@ -146,7 +146,7 @@ mod_quiz_ui <- function(id) {
               shiny::downloadButton(
                 outputId = ns("download_excel"),
                 label = "",
-                style = "display: none;"
+
               ),
               shiny::actionButton(
                 inputId = ns("copy_to_clipboard"),
