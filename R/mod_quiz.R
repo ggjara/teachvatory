@@ -138,15 +138,10 @@ mod_quiz_ui <- function(id) {
           shiny::fluidRow(
             column(
               width = 12,
-              shiny::actionButton(
-                inputId = ns("export_selection"),
-                label = "Export Selection to Excel",
-                icon = shiny::icon("file-excel")
-              ),
               shiny::downloadButton(
                 outputId = ns("download_excel"),
-                label = "",
-
+                label = "Export Selection to Excel",
+                icon = shiny::icon("file-excel")
               ),
               shiny::actionButton(
                 inputId = ns("copy_to_clipboard"),
@@ -637,35 +632,22 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     })
 
     # Add observeEvent for exporting selected rows
-    observeEvent(input$export_selection, {
-      selected_rows <- input$quiz_table_rows_selected  # Get selected row indices
-
-      if (length(selected_rows) > 0) {
-        # Filter the data to get selected rows
-        selected_data <- quiz_processed()[selected_rows, ]%>%
-          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
-
-        # Create a temporary Excel file
-        temp_file <- tempfile(fileext = ".xlsx")
-        writexl::write_xlsx(selected_data, temp_file)
-        browseURL(temp_file)
-        # Set up download handler
-        output$download_excel <- downloadHandler(
-          filename = function() {
-            paste0("Selected_Rows_", Sys.Date(), ".xlsx")
-          },
-          content = function(file) {
-            file.copy(temp_file, file)
-          }
-        )
-
-        # Trigger download programmatically
-        shinyjs::runjs("$('#download_excel')[0].click();")
-      } else {
-        # Notify if no rows are selected
-        showNotification("No rows selected for export!", type = "error")
+    output$download_excel <- downloadHandler(
+      filename = function() {
+        paste0("Selected_Rows_", Sys.Date(), ".xlsx")
+      },
+      content = function(file) {
+        selected_rows <- input$quiz_table_rows_selected
+        if (length(selected_rows) > 0) {
+          selected_data <- quiz_processed()[selected_rows, ] %>%
+            dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+          writexl::write_xlsx(selected_data, file)
+        } else {
+          writexl::write_xlsx(data.frame(Message = "No rows selected"), file)
+        }
       }
-    })
+    )
+
 
     observeEvent(input$copy_to_clipboard, {
       selected_rows <- input$quiz_table_rows_selected
