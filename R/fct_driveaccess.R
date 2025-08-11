@@ -255,7 +255,7 @@ get_roster_filter_columns <- function(
       additional_columns <- additional_columns[!is.na(additional_columns) & additional_columns != ""]
 
       # Exclude any remaining system columns
-      system_columns <- c("Invalid", "FormRanger Column", "name_canvas")
+      system_columns <- c("Invalid", "FormRanger Column", "name_canvas", "order")
       additional_columns <- additional_columns[!additional_columns %in% system_columns]
     } else {
       # If there are fewer than 25 columns, no additional filter columns exist
