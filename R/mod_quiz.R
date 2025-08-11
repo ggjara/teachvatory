@@ -123,6 +123,50 @@ mod_quiz_ui <- function(id) {
             )
           )
         ),
+        # Add filter variables section
+        shiny::fluidRow(
+          bs4Dash::column(
+            width = 12,
+            shinyWidgets::prettySwitch(
+              inputId = ns("enable_additional_filters"),
+              label = "Toggle filter variables",
+              value = FALSE,
+              status = "primary",
+              fill = TRUE
+            )
+          )
+        ),
+        # Conditional UI for filter variable selection
+        shiny::conditionalPanel(
+          condition = paste0("input['", ns("enable_additional_filters"), "'] == true"),
+          shiny::fluidRow(
+            bs4Dash::column(
+              width = 12,
+              shinyWidgets::pickerInput(
+                inputId = ns("additional_filter_vars"),
+                label = "Select additional variables to display:",
+                choices = NULL,
+                selected = NULL,
+                multiple = TRUE,
+                options = list(
+                  `live-search` = TRUE,
+                  `actions-box` = TRUE,
+                  `selected-text-format` = "count > 2",
+                  `none-selected-text` = "No additional variables available"
+                )
+              ),
+              # Show message when no variables are available
+              shiny::conditionalPanel(
+                condition = paste0("output['", ns("no_additional_vars"), "'] == true"),
+                shiny::div(
+                  shiny::p("No additional filter variables are available in the roster data.", 
+                          style = "color: #6c757d; font-style: italic; margin-top: 10px;"),
+                  class = "text-muted"
+                )
+              )
+            )
+          )
+        ),
         shiny::fluidRow(
           column(
             width = 12,
@@ -249,7 +293,37 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     # Join quiz with Roster
     quiz_processed <- shiny::reactive({
-      join_quiz_roster(quiz_filtered(), main_inputs$roster(), id_colname())
+      # Depend on the trigger to ensure re-evaluation when additional vars change
+      additional_vars_trigger()
+      
+      # Early return if required data is not available
+      if (is.null(quiz_filtered()) || is.null(main_inputs$roster()) || is.null(id_colname())) {
+        return(NULL)
+      }
+      
+      tryCatch({
+        # Get the current state of additional filters
+        use_additional <- !is.null(input$enable_additional_filters) && 
+                         input$enable_additional_filters && 
+                         !is.null(input$additional_filter_vars) && 
+                         length(input$additional_filter_vars) > 0
+        
+        if (use_additional) {
+          # Use extended join with additional columns from full roster
+          join_quiz_roster_extended(
+            quiz_filtered(), 
+            main_inputs$roster_full(), 
+            id_colname(), 
+            input$additional_filter_vars
+          )
+        } else {
+          # Use standard join with basic roster
+          join_quiz_roster(quiz_filtered(), main_inputs$roster(), id_colname())
+        }
+      }, error = function(e) {
+        # Fallback to standard join if extended join fails
+        join_quiz_roster(quiz_filtered(), main_inputs$roster(), id_colname())
+      })
     })
 
     # Get questions for select inputs
@@ -259,7 +333,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     n_responses <- shiny::reactive({
       nrows <- nrow(quiz_processed())
-      if (is.null(nrows) | id_colname()=="" | is.na(id_colname())) {
+      if (is.null(nrows) || id_colname()=="" || is.na(id_colname())) {
         nrows <- 0
       }
       nrows
@@ -271,6 +345,19 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         nrows <- 0
       }
       nrows
+    })
+
+    # Available filter columns from roster
+    available_filter_columns <- shiny::reactive({
+      tryCatch({
+        cols <- main_inputs$roster_filter_columns()
+        if (length(cols) == 0) {
+          return(NULL)
+        }
+        return(cols)
+      }, error = function(e) {
+        return(NULL)
+      })
     })
 
     modal_responses_data <- reactive({
@@ -325,6 +412,9 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     ##For filter by selection in table
     selected_rows_f <- reactiveVal(c())  # Stores selected row indices
     show_selected <- reactiveVal(FALSE)  # Tracks whether to show only selected rows
+
+    # Add a reactive trigger for when additional variables configuration changes
+    additional_vars_trigger <- reactiveVal(0)
 
     observeEvent(input$quiz_table_rows_selected, {
       selected_rows_f(input$quiz_table_rows_selected)  # Store selected rows persistently
@@ -411,9 +501,51 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       )
     })
 
+    # Update additional filter variables choices
+    shiny::observeEvent(available_filter_columns(), {
+      choices <- available_filter_columns()
+      if (is.null(choices) || length(choices) == 0) {
+        # Show message in the UI that no variables are available
+        choices <- NULL
+        choicesOpt <- list(
+          content = "No additional filter variables available"
+        )
+      } else {
+        # Use the named list where names are display names and values are column names
+        choicesOpt <- list()
+      }
+      
+      shinyWidgets::updatePickerInput(
+        session,
+        inputId = "additional_filter_vars",
+        choices = choices,
+        selected = NULL,
+        choicesOpt = if(is.null(choices)) choicesOpt else NULL
+      )
+    })
+
+    # Force quiz_processed to invalidate when additional filter variables change
+    shiny::observeEvent(input$additional_filter_vars, {
+      # Trigger invalidation by updating our reactive trigger
+      additional_vars_trigger(additional_vars_trigger() + 1)
+    }, ignoreNULL = FALSE)
+
+    # Force quiz_processed to invalidate when enable_additional_filters changes
+    shiny::observeEvent(input$enable_additional_filters, {
+      # Trigger invalidation by updating our reactive trigger
+      additional_vars_trigger(additional_vars_trigger() + 1)
+    }, ignoreNULL = FALSE)
+
     ####### End Updates #######
 
     ####### Render #######
+
+    # Output to control conditional panel for no additional variables message
+    output$no_additional_vars <- shiny::reactive({
+      cols <- available_filter_columns()
+      return(is.null(cols) || length(cols) == 0)
+    })
+    outputOptions(output, "no_additional_vars", suspendWhenHidden = FALSE)
 
     output$valuebox_1 <- bs4Dash::renderbs4ValueBox({
       val <- 0
@@ -567,30 +699,133 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         shiny::need(!is.null(quiz_processed()),
                     message = "Quiz was not uploaded correctly. Check your inputs.")
       )
+      
+      # Explicit dependency on additional filter variables to ensure re-rendering
+      additional_vars_trigger()
+      
       col_to_match <- id_colname()
       brks <- seq(0, 1, 0.1)
       clrs <-
         colorRampPalette(c("#dc3545", "#ffc107", "#28a745"))(length(brks) + 1)
 
+      # Get additional filter variables if enabled
+      additional_vars <- character(0)
+      if (!is.null(input$enable_additional_filters) && input$enable_additional_filters && 
+          !is.null(input$additional_filter_vars) && length(input$additional_filter_vars) > 0) {
+        # input$additional_filter_vars contains the actual column names (values from named list)
+        additional_vars <- input$additional_filter_vars
+      }
+
       if(col_to_match!="" && !is.na(col_to_match)){
-        cols_toselect <- unique(c(col_to_match,
-                           "teachly",
-                           input$filter_crosstab1,
-                           input$filter_crosstab2))
-        cols_toshow <- unique(c(
-          "Name",
-          "Teachly",
-          stringr::str_sub(input$filter_crosstab1, end = 200),
-          stringr::str_sub(input$filter_crosstab2, end = 200))
-        )
+        # Build columns to select: Name, Teachly, Additional vars (after Teachly), then crosstab questions
+        cols_toselect <- c(col_to_match, "teachly")
+        cols_toshow <- c("Name", "Teachly")
+        
+        # Add additional variables after Teachly (only if they exist in the data)
+        if (length(additional_vars) > 0) {
+          # Filter to only include columns that actually exist in quiz_processed()
+          available_additional_vars <- additional_vars[additional_vars %in% colnames(quiz_processed())]
+          if (length(available_additional_vars) > 0) {
+            cols_toselect <- c(cols_toselect, available_additional_vars)
+            
+            # Get display names for the additional vars from the original named list
+            filter_cols_list <- main_inputs$roster_filter_columns()
+            if (!is.null(filter_cols_list) && length(filter_cols_list) > 0) {
+              # Create display names by finding the names corresponding to the values
+              additional_display_names <- character(length(available_additional_vars))
+              for (i in seq_along(available_additional_vars)) {
+                var_name <- available_additional_vars[i]
+                # Find the display name (name) for this column (value)
+                display_name_idx <- which(filter_cols_list == var_name)
+                if (length(display_name_idx) > 0) {
+                  display_name <- names(filter_cols_list)[display_name_idx[1]]
+                  if (!is.null(display_name) && !is.na(display_name) && nchar(display_name) > 0) {
+                    additional_display_names[i] <- display_name
+                  } else {
+                    # Fallback to cleaned up column name
+                    additional_display_names[i] <- stringr::str_to_title(stringr::str_replace_all(var_name, "_", " "))
+                  }
+                } else {
+                  # Fallback to cleaned up column name
+                  additional_display_names[i] <- stringr::str_to_title(stringr::str_replace_all(var_name, "_", " "))
+                }
+              }
+            } else {
+              # Fallback to cleaned up column names
+              additional_display_names <- stringr::str_to_title(stringr::str_replace_all(available_additional_vars, "_", " "))
+            }
+            
+            cols_toshow <- c(cols_toshow, additional_display_names)
+          }
+        }
+        
+        # Add crosstab questions at the end
+        cols_toselect <- c(cols_toselect, input$filter_crosstab1, input$filter_crosstab2)
+        cols_toshow <- c(cols_toshow, 
+                        stringr::str_sub(input$filter_crosstab1, end = 200),
+                        stringr::str_sub(input$filter_crosstab2, end = 200))
+        
+        # Remove duplicates while preserving order
+        cols_toselect <- unique(cols_toselect)
+        cols_toshow <- unique(cols_toshow)
       }
       else{
-        cols_toselect <- unique(c(input$filter_crosstab1,
-                           input$filter_crosstab2))
-        cols_toshow <- unique(c(
-          stringr::str_sub(input$filter_crosstab1, end = 200),
-          stringr::str_sub(input$filter_crosstab2, end = 200))
-        )
+        cols_toselect <- c(input$filter_crosstab1, input$filter_crosstab2)
+        cols_toshow <- c(stringr::str_sub(input$filter_crosstab1, end = 200),
+                        stringr::str_sub(input$filter_crosstab2, end = 200))
+        
+        # Add additional variables if available even without name matching
+        if (length(additional_vars) > 0) {
+          # Filter to only include columns that actually exist in quiz_processed()
+          available_additional_vars <- additional_vars[additional_vars %in% colnames(quiz_processed())]
+          if (length(available_additional_vars) > 0) {
+            cols_toselect <- c(available_additional_vars, cols_toselect)
+            
+            # Get display names for the additional vars from the original named list
+            filter_cols_list <- main_inputs$roster_filter_columns()
+            if (!is.null(filter_cols_list) && length(filter_cols_list) > 0) {
+              # Create display names by finding the names corresponding to the values
+              additional_display_names <- character(length(available_additional_vars))
+              for (i in seq_along(available_additional_vars)) {
+                var_name <- available_additional_vars[i]
+                # Find the display name (name) for this column (value)
+                display_name_idx <- which(filter_cols_list == var_name)
+                if (length(display_name_idx) > 0) {
+                  display_name <- names(filter_cols_list)[display_name_idx[1]]
+                  if (!is.null(display_name) && !is.na(display_name) && nchar(display_name) > 0) {
+                    additional_display_names[i] <- display_name
+                  } else {
+                    # Fallback to cleaned up column name
+                    additional_display_names[i] <- stringr::str_to_title(stringr::str_replace_all(var_name, "_", " "))
+                  }
+                } else {
+                  # Fallback to cleaned up column name
+                  additional_display_names[i] <- stringr::str_to_title(stringr::str_replace_all(var_name, "_", " "))
+                }
+              }
+            } else {
+              # Fallback to cleaned up column names
+              additional_display_names <- stringr::str_to_title(stringr::str_replace_all(available_additional_vars, "_", " "))
+            }
+            
+            cols_toshow <- c(additional_display_names, cols_toshow)
+          }
+        }
+        
+        cols_toselect <- unique(cols_toselect)
+        cols_toshow <- unique(cols_toshow)
+      }
+
+      # Final validation: only select columns that actually exist
+      available_cols_toselect <- cols_toselect[cols_toselect %in% colnames(quiz_processed())]
+      
+      # Adjust display names to match available columns
+      if (length(available_cols_toselect) < length(cols_toselect)) {
+        # Find which columns were removed and adjust display names accordingly
+        removed_indices <- which(!cols_toselect %in% available_cols_toselect)
+        if (length(removed_indices) > 0) {
+          cols_toshow <- cols_toshow[-removed_indices]
+        }
       }
 
       data_to_show <- quiz_processed()  # Always pull fresh data
@@ -599,19 +834,16 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         data_to_show <- selected_table_data()  # Use stored selection if "Show Selected" is active
       }
 
-
       if (is.null(data_to_show)) {
         data_to_show <- quiz_processed()  # Default to full table
       }
 
-
-
       dt <- DT::datatable(
         data_to_show %>%
-          dplyr::select(cols_toselect) %>%
+          dplyr::select(all_of(available_cols_toselect)) %>%
           data.table::setnames(
-            old = cols_toselect,
-            new = cols_toshow,
+            old = available_cols_toselect,
+            new = cols_toshow[seq_along(available_cols_toselect)],
             skip_absent = TRUE
           ),
         escape = FALSE,
@@ -641,9 +873,31 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       selected_rows <- input$quiz_table_rows_selected  # Get selected row indices
 
       if (length(selected_rows) > 0) {
+        # Build columns to export
+        cols_to_export <- character(0)
+        
+        # Add name column if available
+        if (id_colname() != "" && !is.na(id_colname())) {
+          cols_to_export <- c(cols_to_export, id_colname())
+        }
+        
+        # Add additional variables if enabled
+        if (input$enable_additional_filters && length(input$additional_filter_vars) > 0) {
+          if (!(length(input$additional_filter_vars) == 1 && input$additional_filter_vars[1] == "No filter variables available")) {
+            cols_to_export <- c(cols_to_export, input$additional_filter_vars)
+          }
+        }
+        
+        # Add crosstab questions
+        cols_to_export <- c(cols_to_export, input$filter_crosstab1, input$filter_crosstab2)
+        
+        # Remove duplicates and filter for existing columns
+        cols_to_export <- unique(cols_to_export)
+        cols_to_export <- cols_to_export[cols_to_export %in% colnames(quiz_processed())]
+        
         # Filter the data to get selected rows
-        selected_data <- quiz_processed()[selected_rows, ]%>%
-          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+        selected_data <- quiz_processed()[selected_rows, ] %>%
+          dplyr::select(all_of(cols_to_export))
 
         # Create a temporary Excel file
         temp_file <- tempfile(fileext = ".xlsx")
@@ -670,16 +924,37 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
     observeEvent(input$copy_to_clipboard, {
       selected_rows <- input$quiz_table_rows_selected
       if (length(selected_rows) > 0) {
-        # Select only the relevant columns: Name + selected crosstab questions
+        # Build columns to copy (same logic as export)
+        cols_to_copy <- character(0)
+        
+        # Add name column if available
+        if (id_colname() != "" && !is.na(id_colname())) {
+          cols_to_copy <- c(cols_to_copy, id_colname())
+        }
+        
+        # Add additional variables if enabled
+        if (input$enable_additional_filters && length(input$additional_filter_vars) > 0) {
+          if (!(length(input$additional_filter_vars) == 1 && input$additional_filter_vars[1] == "No filter variables available")) {
+            cols_to_copy <- c(cols_to_copy, input$additional_filter_vars)
+          }
+        }
+        
+        # Add crosstab questions
+        cols_to_copy <- c(cols_to_copy, input$filter_crosstab1, input$filter_crosstab2)
+        
+        # Remove duplicates and filter for existing columns
+        cols_to_copy <- unique(cols_to_copy)
+        cols_to_copy <- cols_to_copy[cols_to_copy %in% colnames(quiz_processed())]
+        
+        # Select only the relevant columns
         selected_data <- quiz_processed()[selected_rows, ] %>%
-          dplyr::select(matches("^[Yy]our [Nn]ame$"), input$filter_crosstab1, input$filter_crosstab2)
+          dplyr::select(all_of(cols_to_copy))
 
         # Convert to tab-separated values (TSV) for clipboard pasting
         clipboard_text <- paste(
           apply(selected_data, 1, function(row) paste(row, collapse = "\t")),
           collapse = "\n"
         )
-
 
         # JavaScript code to insert text into a hidden textarea, select it, and copy it
         js_code <- sprintf("

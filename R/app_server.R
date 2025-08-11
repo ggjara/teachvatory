@@ -105,7 +105,7 @@ app_server <- function(input, output, session) {
 
 
   # Load Roster file + using roster sheet_name
-  # Returns tibble() with the Roster dataframe
+  # Returns tibble() with the Roster dataframe (basic columns only)
   roster <- shiny::eventReactive(input$load_course, {
     shiny::req(input$filter_roster, input$filter_roster_sheet)
     w$show()
@@ -115,7 +115,30 @@ app_server <- function(input, output, session) {
     get_roster(
       course_directory(),
       input$filter_roster,
-      input$filter_roster_sheet
+      input$filter_roster_sheet,
+      include_all_columns = FALSE
+    )
+  })
+  
+  # Load Full Roster with all columns for filtering
+  roster_full <- shiny::eventReactive(input$load_course, {
+    shiny::req(input$filter_roster, input$filter_roster_sheet)
+    get_roster(
+      course_directory(),
+      input$filter_roster,
+      input$filter_roster_sheet,
+      include_all_columns = TRUE
+    )
+  })
+  
+  # Get available filter columns from roster
+  roster_filter_columns <- shiny::eventReactive(input$load_course, {
+    shiny::req(input$filter_roster, input$filter_roster_sheet)
+    get_roster_filter_columns(
+      course_directory(),
+      input$filter_roster,
+      input$filter_roster_sheet,
+      return_named_list = TRUE
     )
   })
   ####### End Reactive Values  #######
@@ -186,7 +209,9 @@ app_server <- function(input, output, session) {
   main_inputs <- list(
     selected_course = selected_course,
     masterquiz_md = masterquiz_md,
-    roster = roster
+    roster = roster,
+    roster_full = roster_full,
+    roster_filter_columns = roster_filter_columns
   )
   mod_quiz_server("quiz_1", FALSE, main_inputs = main_inputs)
   # Call the submodule with the quiz processed.

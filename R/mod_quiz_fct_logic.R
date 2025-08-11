@@ -98,7 +98,7 @@ filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INIT
     )
   }
 
-  if (col_to_match == "" | is.na(col_to_match)) {
+  if (col_to_match == "" || is.na(col_to_match)) {
     return(quiz_temp)
   }
 
@@ -172,11 +172,11 @@ filter_quiz <- function(quiz, col_to_match, col_alternative, initial_date = INIT
 #' @noRd
 #' @import stringr dplyr
 join_quiz_roster <- function(quiz, roster, col_to_match) {
-  if (is.null(quiz) | nrow(quiz)==0) {
+  if (is.null(quiz) || nrow(quiz) == 0) {
     return(NULL)
   }
 
-  if (col_to_match == "" | is.null(col_to_match) ) {
+  if (col_to_match == "" || is.null(col_to_match)) {
     return(quiz)
   }
 
@@ -185,8 +185,7 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
     quiz <- quiz %>%
       dplyr::mutate(dplyr::across(c(col_to_match), as.character))
   }
-  if (is.null(roster) || nrow(roster) == 0 ||
-    !all(c("standardized_name", "teachly") %in% colnames(roster))) {
+  if (is.null(roster) || nrow(roster) == 0 || !all(c("standardized_name", "teachly") %in% colnames(roster))) {
     quiz %>%
       dplyr::left_join(
         dplyr::tibble("standardized_name" = "XXX", "teachly" = 0) %>%
@@ -200,6 +199,76 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
         roster %>%
           dplyr::rename(!!col_to_match := "standardized_name") %>%
           dplyr::select(c(col_to_match, "teachly")),
+        by = col_to_match
+      )
+  }
+}
+
+#' Join quiz responses with Roster including additional columns
+#'
+#' @param quiz A data frame.
+#' @param roster A data frame.
+#' @param col_to_match A string of the column name to match.
+#' @param additional_cols A character vector of additional columns to include from roster.
+#'
+#' @return A dataframe with the quiz + the roster's teachly index and additional columns.
+#' If roster is empty, teachly index will be empty.
+#' @noRd
+#' @import stringr dplyr
+join_quiz_roster_extended <- function(quiz, roster, col_to_match, additional_cols = character(0)) {
+  if (is.null(quiz) || nrow(quiz)==0) {
+    return(NULL)
+  }
+
+  if (col_to_match == "" || is.null(col_to_match) ) {
+    return(quiz)
+  }
+
+  # Re format
+  if (typeof(quiz %>% select(c(col_to_match)) %>% pull()) == "logical") {
+    quiz <- quiz %>%
+      dplyr::mutate(dplyr::across(c(col_to_match), as.character))
+  }
+
+  # Determine which columns to select from roster
+  base_cols <- c("standardized_name", "teachly")
+  cols_to_select <- base_cols
+
+  # Add additional columns if they exist in the roster
+  if (length(additional_cols) > 0 && !is.null(roster) && nrow(roster) > 0) {
+    available_additional_cols <- additional_cols[additional_cols %in% colnames(roster)]
+    if (length(available_additional_cols) > 0) {
+      cols_to_select <- c(cols_to_select, available_additional_cols)
+    }
+  }
+
+  if (is.null(roster) || nrow(roster) == 0 ||
+    !all(c("standardized_name", "teachly") %in% colnames(roster))) {
+    # Create empty tibble with default values
+    empty_roster <- dplyr::tibble("standardized_name" = "XXX", "teachly" = 0)
+
+    # Add empty columns for additional vars that were requested
+    if (length(additional_cols) > 0) {
+      for (col in additional_cols) {
+        empty_roster[[col]] <- NA
+      }
+    }
+
+    quiz %>%
+      dplyr::left_join(
+        empty_roster %>%
+          dplyr::rename(!!col_to_match := "standardized_name"),
+        by = col_to_match
+      )
+  } else {
+    # Use available columns only, but ensure standardized_name is always included
+    available_cols_to_select <- cols_to_select[cols_to_select %in% colnames(roster)]
+
+    quiz %>%
+      dplyr::left_join(
+        roster %>%
+          dplyr::select(all_of(available_cols_to_select)) %>%
+          dplyr::rename(!!col_to_match := "standardized_name"),
         by = col_to_match
       )
   }
@@ -221,7 +290,7 @@ get_questions_from_quiz <- function(quiz) {
       toupper(questions_temp),
       paste0("\\b", toupper(QUESTIONS_TO_TAKE_OUT), "\\b", collapse = "|")
     )]
-  return(questions_temp)
+  questions_temp
 }
 
 #' Modal of list of students
@@ -246,7 +315,7 @@ students_list_modal <- function(dataframe, title = "Students") {
     title = title,
     DT::datatable(
       dataframe,
-      colnames = colnames_to_show[1:ncol(dataframe)],
+      colnames = colnames_to_show[seq_len(ncol(dataframe))],
       rownames = FALSE,
       style = "bootstrap4",
       filter = "top",
