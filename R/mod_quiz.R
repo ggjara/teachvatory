@@ -137,13 +137,15 @@ mod_quiz_ui <- function(id) {
         # Add filter variables section
         shiny::fluidRow(
           bs4Dash::column(
-            width = 12,
+            width = 3,
             shinyWidgets::prettySwitch(
               inputId = ns("enable_additional_filters"),
               label = "Toggle filter variables",
               value = FALSE,
               status = "primary",
-              fill = TRUE
+              fill = TRUE,
+              bigger = FALSE,
+              inline = TRUE
             )
           )
         ),
@@ -152,19 +154,19 @@ mod_quiz_ui <- function(id) {
           condition = paste0("input['", ns("enable_additional_filters"), "'] == true"),
           shiny::fluidRow(
             bs4Dash::column(
-              width = 12,
-              shinyWidgets::pickerInput(
+              width = 3,
+              shinyWidgets::virtualSelectInput(
                 inputId = ns("additional_filter_vars"),
                 label = "Select additional variables to display:",
                 choices = NULL,
                 selected = NULL,
                 multiple = TRUE,
-                options = list(
-                  `live-search` = TRUE,
-                  `actions-box` = TRUE,
-                  `selected-text-format` = "count > 2",
-                  `none-selected-text` = "No additional variables available"
-                )
+                search = TRUE,
+                optionsCount = 5,
+                noOptionsText = "No additional variables available",
+                placeholder = "Choose variables...",
+                allowNewOption = FALSE,
+                showSelectedOptionsFirst = TRUE
               ),
               # Show message when no variables are available
               shiny::conditionalPanel(
@@ -538,20 +540,12 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       if (is.null(choices) || length(choices) == 0) {
         # Show message in the UI that no variables are available
         choices <- NULL
-        choicesOpt <- list(
-          content = "No additional filter variables available"
-        )
-      } else {
-        # Use the named list where names are display names and values are column names
-        choicesOpt <- list()
       }
 
-      shinyWidgets::updatePickerInput(
-        session,
+      shinyWidgets::updateVirtualSelect(
         inputId = "additional_filter_vars",
         choices = choices,
-        selected = NULL,
-        choicesOpt = if (is.null(choices)) choicesOpt else NULL
+        selected = NULL
       )
     })
 
