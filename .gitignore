@@ -35,3 +35,5 @@ rsconnect/
 .secrets
 
 .secrets.emails/gmail_creds
+
+test_simple.R
