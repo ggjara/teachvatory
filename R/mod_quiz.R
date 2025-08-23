@@ -134,24 +134,42 @@ mod_quiz_ui <- function(id) {
             )
           )
         ),
-        # Add filter variables section
-        shiny::fluidRow(
-          bs4Dash::column(
-            width = 3,
-            shinyWidgets::prettySwitch(
-              inputId = ns("enable_additional_filters"),
-              label = "Toggle filter variables",
-              value = FALSE,
-              status = "primary",
-              fill = TRUE,
-              bigger = FALSE,
-              inline = TRUE
+        # Add filter variables section (conditional on filter sheet availability)
+        shiny::conditionalPanel(
+          condition = paste0("output['", ns("filter_sheet_available"), "'] == true"),
+          shiny::fluidRow(
+            bs4Dash::column(
+              width = 3,
+              shinyWidgets::prettySwitch(
+                inputId = ns("enable_additional_filters"),
+                label = "Toggle filter variables",
+                value = FALSE,
+                status = "primary",
+                fill = TRUE,
+                bigger = FALSE,
+                inline = TRUE
+              )
+            )
+          )
+        ),
+        # Show message when filter sheet is not available
+        shiny::conditionalPanel(
+          condition = paste0("output['", ns("filter_sheet_available"), "'] == false"),
+          shiny::fluidRow(
+            bs4Dash::column(
+              width = 12,
+              shiny::div(
+                shiny::p("Filter sheet is not loaded or unavailable for this course. Additional filter variables are not available.",
+                  style = "color: #6c757d; font-style: italic; margin-top: 10px;"
+                ),
+                class = "text-muted"
+              )
             )
           )
         ),
         # Conditional UI for filter variable selection
         shiny::conditionalPanel(
-          condition = paste0("input['", ns("enable_additional_filters"), "'] == true"),
+          condition = paste0("input['", ns("enable_additional_filters"), "'] == true && output['", ns("filter_sheet_available"), "'] == true"),
           shiny::fluidRow(
             bs4Dash::column(
               width = 3,
@@ -172,7 +190,7 @@ mod_quiz_ui <- function(id) {
               shiny::conditionalPanel(
                 condition = paste0("output['", ns("no_additional_vars"), "'] == true"),
                 shiny::div(
-                  shiny::p("No additional filter variables are available in the roster data.",
+                  shiny::p("No additional filter variables are available in the filter sheet data.",
                     style = "color: #6c757d; font-style: italic; margin-top: 10px;"
                   ),
                   class = "text-muted"
@@ -322,13 +340,15 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           use_additional <- !is.null(input$enable_additional_filters) &&
             input$enable_additional_filters &&
             !is.null(input$additional_filter_vars) &&
-            length(input$additional_filter_vars) > 0
+            length(input$additional_filter_vars) > 0 &&
+            main_inputs$filter_sheet_available()  # Also check if filter sheet is available
 
           if (use_additional) {
-            # Use extended join with additional columns from full roster
-            join_quiz_roster_extended(
+            # Use join with filter sheet data
+            join_quiz_roster_with_filters(
               quiz_filtered(),
-              main_inputs$roster_full(),
+              main_inputs$roster(),
+              main_inputs$filter_sheet_data(),
               id_colname(),
               input$additional_filter_vars
             )
@@ -338,7 +358,7 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           }
         },
         error = function(e) {
-          # Fallback to standard join if extended join fails
+          # Fallback to standard join if filter join fails
           join_quiz_roster(quiz_filtered(), main_inputs$roster(), id_colname())
         }
       )
@@ -365,11 +385,17 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
       nrows
     })
 
-    # Available filter columns from roster
+    # Available filter columns from filter sheet
     available_filter_columns <- shiny::reactive({
       tryCatch(
         {
-          cols <- main_inputs$roster_filter_columns()
+          # Check if filter sheet is available first
+          if (!main_inputs$filter_sheet_available()) {
+            return(NULL)
+          }
+          
+          # Use filter variables from filter sheet
+          cols <- main_inputs$filter_variables()
           if (length(cols) == 0) {
             return(NULL)
           }
@@ -380,6 +406,18 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
         }
       )
     })
+
+    # Output for filter sheet availability
+    output$filter_sheet_available <- shiny::reactive({
+      main_inputs$filter_sheet_available()
+    })
+    shiny::outputOptions(output, "filter_sheet_available", suspendWhenHidden = FALSE)
+
+    # Output for showing no additional vars message
+    output$no_additional_vars <- shiny::reactive({
+      is.null(available_filter_columns()) || length(available_filter_columns()) == 0
+    })
+    shiny::outputOptions(output, "no_additional_vars", suspendWhenHidden = FALSE)
 
     modal_responses_data <- reactive({
       data_to_show <- dplyr::tibble()
@@ -571,13 +609,6 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
 
     ####### Render #######
 
-    # Output to control conditional panel for no additional variables message
-    output$no_additional_vars <- shiny::reactive({
-      cols <- available_filter_columns()
-      return(is.null(cols) || length(cols) == 0)
-    })
-    outputOptions(output, "no_additional_vars", suspendWhenHidden = FALSE)
-
     output$valuebox_1 <- bs4Dash::renderbs4ValueBox({
       val <- 0
       tryCatch(
@@ -767,8 +798,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           if (length(available_additional_vars) > 0) {
             cols_toselect <- c(cols_toselect, available_additional_vars)
 
-            # Get display names for the additional vars from the original named list
-            filter_cols_list <- main_inputs$roster_filter_columns()
+            # Get display names for the additional vars from the filter variables list
+            filter_cols_list <- main_inputs$filter_variables()
             if (!is.null(filter_cols_list) && length(filter_cols_list) > 0) {
               # Create display names by finding the names corresponding to the values
               additional_display_names <- character(length(available_additional_vars))
@@ -823,8 +854,8 @@ mod_quiz_server <- function(id, stringAsFactors = FALSE, main_inputs) {
           if (length(available_additional_vars) > 0) {
             cols_toselect <- c(available_additional_vars, cols_toselect)
 
-            # Get display names for the additional vars from the original named list
-            filter_cols_list <- main_inputs$roster_filter_columns()
+            # Get display names for the additional vars from the filter variables list
+            filter_cols_list <- main_inputs$filter_variables()
             if (!is.null(filter_cols_list) && length(filter_cols_list) > 0) {
               # Create display names by finding the names corresponding to the values
               additional_display_names <- character(length(available_additional_vars))

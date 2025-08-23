@@ -115,31 +115,51 @@ app_server <- function(input, output, session) {
     get_roster(
       course_directory(),
       input$filter_roster,
-      input$filter_roster_sheet,
-      include_all_columns = FALSE
+      input$filter_roster_sheet
     )
   })
   
-  # Load Full Roster with all columns for filtering
-  roster_full <- shiny::eventReactive(input$load_course, {
-    shiny::req(input$filter_roster, input$filter_roster_sheet)
-    get_roster(
+  # Load Filter Sheet Data (optional)
+  filter_sheet_data <- shiny::eventReactive(input$load_course, {
+    # Only load if filter sheet is selected
+    if (is.null(input$filter_sheet) || input$filter_sheet == "") {
+      return(NULL)
+    }
+    
+    shiny::req(input$filter_roster, input$filter_sheet)
+    w$show()
+    on.exit({
+      w$hide()
+    })
+    get_filter_sheet(
       course_directory(),
       input$filter_roster,
-      input$filter_roster_sheet,
-      include_all_columns = TRUE
+      input$filter_sheet
     )
   })
   
-  # Get available filter columns from roster
-  roster_filter_columns <- shiny::eventReactive(input$load_course, {
-    shiny::req(input$filter_roster, input$filter_roster_sheet)
-    get_roster_filter_columns(
+  # Get available filter variables from filter sheet (optional)
+  filter_variables <- shiny::eventReactive(input$load_course, {
+    # Only get variables if filter sheet is selected and loaded
+    if (is.null(input$filter_sheet) || input$filter_sheet == "" || is.null(filter_sheet_data())) {
+      return(character(0))
+    }
+    
+    shiny::req(input$filter_roster, input$filter_sheet)
+    get_filter_variables(
       course_directory(),
       input$filter_roster,
-      input$filter_roster_sheet,
+      input$filter_sheet,
       return_named_list = TRUE
     )
+  })
+  
+  # Reactive to check if filter sheet is available
+  filter_sheet_available <- shiny::reactive({
+    !is.null(input$filter_sheet) && 
+    input$filter_sheet != "" && 
+    !is.null(filter_sheet_data()) && 
+    length(filter_variables()) > 0
   })
   ####### End Reactive Values  #######
 
@@ -187,6 +207,14 @@ app_server <- function(input, output, session) {
       choices = roster_sheetnames(),
       selected = roster_sheetnames()[stringr::str_detect(toupper(roster_sheetnames()), "ROSTER")][1]
     )
+    
+    # Also update filter sheet choices (same file, different sheets)
+    shiny::updateSelectInput(
+      session,
+      inputId = "filter_sheet",
+      choices = roster_sheetnames(),
+      selected = roster_sheetnames()[stringr::str_detect(toupper(roster_sheetnames()), "FILTER")][1]
+    )
   })
 
   # Hide controlbar after loading course
@@ -210,8 +238,9 @@ app_server <- function(input, output, session) {
     selected_course = selected_course,
     masterquiz_md = masterquiz_md,
     roster = roster,
-    roster_full = roster_full,
-    roster_filter_columns = roster_filter_columns
+    filter_sheet_data = filter_sheet_data,
+    filter_variables = filter_variables,
+    filter_sheet_available = filter_sheet_available
   )
   mod_quiz_server("quiz_1", FALSE, main_inputs = main_inputs)
   # Call the submodule with the quiz processed.

@@ -204,76 +204,6 @@ join_quiz_roster <- function(quiz, roster, col_to_match) {
   }
 }
 
-#' Join quiz responses with Roster including additional columns
-#'
-#' @param quiz A data frame.
-#' @param roster A data frame.
-#' @param col_to_match A string of the column name to match.
-#' @param additional_cols A character vector of additional columns to include from roster.
-#'
-#' @return A dataframe with the quiz + the roster's teachly index and additional columns.
-#' If roster is empty, teachly index will be empty.
-#' @noRd
-#' @import stringr dplyr
-join_quiz_roster_extended <- function(quiz, roster, col_to_match, additional_cols = character(0)) {
-  if (is.null(quiz) || nrow(quiz)==0) {
-    return(NULL)
-  }
-
-  if (col_to_match == "" || is.null(col_to_match) ) {
-    return(quiz)
-  }
-
-  # Re format
-  if (typeof(quiz %>% select(c(col_to_match)) %>% pull()) == "logical") {
-    quiz <- quiz %>%
-      dplyr::mutate(dplyr::across(c(col_to_match), as.character))
-  }
-
-  # Determine which columns to select from roster
-  base_cols <- c("standardized_name", "teachly")
-  cols_to_select <- base_cols
-
-  # Add additional columns if they exist in the roster
-  if (length(additional_cols) > 0 && !is.null(roster) && nrow(roster) > 0) {
-    available_additional_cols <- additional_cols[additional_cols %in% colnames(roster)]
-    if (length(available_additional_cols) > 0) {
-      cols_to_select <- c(cols_to_select, available_additional_cols)
-    }
-  }
-
-  if (is.null(roster) || nrow(roster) == 0 ||
-    !all(c("standardized_name", "teachly") %in% colnames(roster))) {
-    # Create empty tibble with default values
-    empty_roster <- dplyr::tibble("standardized_name" = "XXX", "teachly" = 0)
-
-    # Add empty columns for additional vars that were requested
-    if (length(additional_cols) > 0) {
-      for (col in additional_cols) {
-        empty_roster[[col]] <- NA
-      }
-    }
-
-    quiz %>%
-      dplyr::left_join(
-        empty_roster %>%
-          dplyr::rename(!!col_to_match := "standardized_name"),
-        by = col_to_match
-      )
-  } else {
-    # Use available columns only, but ensure standardized_name is always included
-    available_cols_to_select <- cols_to_select[cols_to_select %in% colnames(roster)]
-
-    quiz %>%
-      dplyr::left_join(
-        roster %>%
-          dplyr::select(all_of(available_cols_to_select)) %>%
-          dplyr::rename(!!col_to_match := "standardized_name"),
-        by = col_to_match
-      )
-  }
-}
-
 #' Get questions from quiz
 #'
 #' @description Get questions from quiz by removing questions of `QUESTIONS_TO_TAKE_OUT`.
@@ -343,4 +273,105 @@ students_list_modal <- function(dataframe, title = "Students") {
     fade = FALSE,
     footer = NULL
   )
+}
+
+#' Join Quiz with Filter Sheet Data
+#'
+#' @description Join quiz responses with filter sheet data based on canvas_name or canvas_id matching.
+#'
+#' @param quiz A data frame with quiz responses.
+#' @param roster A data frame with basic roster information (for teachly data).
+#' @param filter_sheet A data frame with filter sheet data.
+#' @param col_to_match A string of the column name to match from quiz to roster.
+#' @param filter_vars A character vector of filter variables to include from filter sheet.
+#'
+#' @return A dataframe with the quiz + roster's teachly index + filter variables.
+#' @noRd
+#' @import stringr dplyr
+join_quiz_roster_with_filters <- function(quiz, roster, filter_sheet, col_to_match, filter_vars = character(0)) {
+  if (is.null(quiz) || nrow(quiz) == 0) {
+    return(NULL)
+  }
+
+  if (col_to_match == "" || is.null(col_to_match)) {
+    return(quiz)
+  }
+
+  # Re format quiz column if needed
+  if (typeof(quiz %>% select(c(col_to_match)) %>% pull()) == "logical") {
+    quiz <- quiz %>%
+      dplyr::mutate(dplyr::across(c(col_to_match), as.character))
+  }
+
+  # Step 1: Join quiz with basic roster for teachly data
+  quiz_with_roster <- join_quiz_roster(quiz, roster, col_to_match)
+  
+  if (is.null(quiz_with_roster)) {
+    return(NULL)
+  }
+
+  # Step 2: Join with filter sheet data if available
+  if (is.null(filter_sheet) || nrow(filter_sheet) == 0 || length(filter_vars) == 0) {
+    # Return quiz with roster only if no filter sheet or variables
+    return(quiz_with_roster)
+  }
+
+  # Try to match by canvas_name first (most reliable)
+  # Create a mapping between standardized_name and canvas_name/canvas_id
+  match_success <- FALSE
+  
+  # Prepare filter data with selected variables
+  filter_cols_to_select <- c("canvas_name", "canvas_id")
+  available_filter_vars <- filter_vars[filter_vars %in% colnames(filter_sheet)]
+  
+  if (length(available_filter_vars) > 0) {
+    filter_cols_to_select <- c(filter_cols_to_select, available_filter_vars)
+  }
+  
+  filter_data <- filter_sheet %>%
+    select(all_of(filter_cols_to_select))
+
+  # Try matching by canvas_name (assuming standardized_name in quiz corresponds to canvas_name)
+  tryCatch({
+    # First, try direct join if col_to_match corresponds to canvas_name
+    if ("canvas_name" %in% colnames(filter_data)) {
+      result <- quiz_with_roster %>%
+        left_join(
+          filter_data %>% 
+            select(-canvas_id) %>%  # Remove canvas_id to avoid conflicts
+            rename(!!col_to_match := canvas_name),
+          by = col_to_match
+        )
+      match_success <- TRUE
+      return(result)
+    }
+  }, error = function(e) {
+    # If direct join fails, continue to next method
+  })
+  
+  # If direct join didn't work, try matching by canvas_id
+  if (!match_success && "canvas_id" %in% colnames(filter_data)) {
+    tryCatch({
+      result <- quiz_with_roster %>%
+        left_join(
+          filter_data %>%
+            select(-canvas_name) %>%  # Remove canvas_name to avoid conflicts
+            rename(!!col_to_match := canvas_id),
+          by = col_to_match
+        )
+      match_success <- TRUE
+      return(result)
+    }, error = function(e) {
+      # If this also fails, return original data with empty filter columns
+    })
+  }
+  
+  # If all matching attempts failed, add empty filter columns
+  if (!match_success && length(available_filter_vars) > 0) {
+    for (var in available_filter_vars) {
+      quiz_with_roster[[var]] <- NA
+    }
+  }
+  
+  return(quiz_with_roster)
 }
