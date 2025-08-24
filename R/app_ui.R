@@ -17,6 +17,7 @@ app_ui <- function(request) {
       # Deactivates light/darktoggle
       title = "Teachvatory",
       fullscreen = TRUE,
+      help = NULL,
       header = bs4Dash::dashboardHeader(
         title = bs4Dash::dashboardBrand(
           title = "Teachvatory",
@@ -98,6 +99,12 @@ app_ui <- function(request) {
             shiny::selectInput(
               inputId = "filter_roster_sheet",
               label = "Roster Sheet Name",
+              choices = c(""),
+              selected = ""
+            ),
+            shiny::selectInput(
+              inputId = "filter_sheet",
+              label = "Filter Sheet Name",
               choices = c(""),
               selected = ""
             ),

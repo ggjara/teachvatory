@@ -119,15 +119,13 @@ get_course_directory <- function(courses, selected_course, type = "spreadsheet")
 #' @param course_directory A dribble of files of the selected course's directory
 #' @param filter_roster A string of the Roster's filename
 #' @param filter_roster_sheet A string of the sheetname of the Roster spreadsheet
-#' @param include_all_columns A logical indicating whether to include all columns or just the basic ones
 #'
 #' @return A tibble of the Roster processed or `NULL` if fail.
 #'
 #' @import dplyr stringr googlesheets4 googledrive
 get_roster <- function(course_directory,
                        filter_roster,
-                       filter_roster_sheet,
-                       include_all_columns = FALSE) {
+                       filter_roster_sheet) {
   tryCatch({
     roster_path <- course_directory %>%
       filter(name == filter_roster)
@@ -151,23 +149,15 @@ get_roster <- function(course_directory,
         filter(!Invalid)
     }
 
-    # Select columns based on include_all_columns parameter
-    if (include_all_columns) {
-      # Keep all columns except specifically sensitive ones
-      cols_to_exclude <- c("Invalid", "FormRanger Column")
-      roster_temp <- roster_temp %>%
-        select(-any_of(cols_to_exclude))
-    } else {
-      # Keep only basic columns as before
-      roster_temp <- roster_temp %>%
-        select(
-          standardized_name,
-          email_teachly,
-          teachly,
-          teachly_comments,
-          teachly_absences
-        )
-    }
+    # Keep only basic columns
+    roster_temp <- roster_temp %>%
+      select(
+        standardized_name,
+        email_teachly,
+        teachly,
+        teachly_comments,
+        teachly_absences
+      )
 
     # Get only one observation per person. Keep first encounter in Roster.
     roster_temp <- roster_temp %>%
@@ -182,6 +172,8 @@ get_roster <- function(course_directory,
     return(NULL)
   })
 }
+
+#' Get Filter Sheet Data
 
 #' Get Available Filter Columns from Roster
 #'
@@ -285,6 +277,110 @@ get_roster_filter_columns <- function(
     if (return_named_list) {
       return(character(0))
     }
+    return(character(0))
+  })
+}
+
+#' Get Filter Sheet Data
+#'
+#' @description Load filter sheet data from the same Google Sheet file as the roster.
+#' Columns A, B, C are name_canvas, id_canvas, sis_canvas. Columns D onwards are filter variables.
+#'
+#' @param course_directory A dribble of files of the selected course's directory
+#' @param filter_roster A string of the Roster's filename (same file as filter sheet)
+#' @param filter_sheet A string of the sheetname of the Filter spreadsheet
+#'
+#' @return A tibble of the Filter sheet data or `NULL` if fail.
+#'
+#' @import dplyr stringr googlesheets4 googledrive
+get_filter_sheet <- function(course_directory,
+                            filter_roster,
+                            filter_sheet) {
+  tryCatch({
+    roster_path <- course_directory %>%
+      filter(name == filter_roster)
+
+    # Get Sheet metadata (same file as roster)
+    metadata <- googlesheets4::gs4_get(roster_path %>% head(1))
+    
+    # Get Filter sheet dataset
+    filter_temp <- googlesheets4::read_sheet(metadata, sheet = filter_sheet)
+
+    # Basic validation - ensure we have the expected columns A, B, C
+    if (ncol(filter_temp) < 3) {
+      warning("Filter sheet must have at least 3 columns (A: name_canvas, B: id_canvas, C: sis_canvas)")
+      return(NULL)
+    }
+    
+    # Rename first three columns to standard names
+    colnames(filter_temp)[1:3] <- c("name_canvas", "id_canvas", "sis_canvas")
+    
+    # Filter out rows where both name_canvas and id_canvas are NA
+    filter_temp <- filter_temp %>%
+      filter(!is.na(name_canvas) | !is.na(id_canvas))
+    
+    # Remove any completely empty rows
+    filter_temp <- filter_temp %>%
+      filter(if_any(everything(), ~ !is.na(.x)))
+
+    return(filter_temp)
+  },
+  error = function(e) {
+    warning(paste("Error loading filter sheet:", e$message))
+    return(NULL)
+  })
+}
+
+#' Get Filter Variables from Filter Sheet
+#'
+#' @description Get list of filter variables (columns D onwards) from the filter sheet
+#'
+#' @param course_directory A dribble of files of the selected course's directory
+#' @param filter_roster A string of the Roster's filename (same file as filter sheet)
+#' @param filter_sheet A string of the sheetname of the Filter spreadsheet
+#' @param return_named_list A logical indicating whether to return a named list with display names
+#'
+#' @return A character vector of filter variable names or named list with display names
+#'
+#' @import dplyr stringr googlesheets4 googledrive
+get_filter_variables <- function(course_directory,
+                                filter_roster,
+                                filter_sheet,
+                                return_named_list = FALSE) {
+  tryCatch({
+    filter_data <- get_filter_sheet(course_directory, filter_roster, filter_sheet)
+    
+    if (is.null(filter_data) || ncol(filter_data) <= 3) {
+      return(character(0))
+    }
+    
+    # Get columns D onwards (everything after name_canvas, id_canvas, sis_canvas)
+    filter_columns <- colnames(filter_data)[4:ncol(filter_data)]
+    
+    # Remove any columns that are completely NA
+    filter_columns <- filter_columns[!is.na(filter_columns)]
+    
+    if (return_named_list && length(filter_columns) > 0) {
+      # Create prettier display names
+      display_names <- filter_columns
+      # Clean up common patterns in column names
+      display_names <- stringr::str_replace_all(display_names, "_", " ")
+      display_names <- stringr::str_to_title(display_names)
+      # Capitalize common abbreviations
+      display_names <- stringr::str_replace_all(display_names, "\\bId\\b", "ID")
+      display_names <- stringr::str_replace_all(display_names, "\\bEmail\\b", "Email")
+      display_names <- stringr::str_replace_all(display_names, "\\bCanvas\\b", "Canvas")
+
+      # Create named vector where names are display names and values are column names
+      result <- filter_columns
+      names(result) <- display_names
+      return(result)
+    }
+
+    return(filter_columns)
+  },
+  error = function(e) {
+    warning(paste("Error getting filter variables:", e$message))
     return(character(0))
   })
 }
