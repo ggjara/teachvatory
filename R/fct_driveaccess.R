@@ -284,7 +284,7 @@ get_roster_filter_columns <- function(
 #' Get Filter Sheet Data
 #'
 #' @description Load filter sheet data from the same Google Sheet file as the roster.
-#' Columns A, B, C are canvas_name, canvas_id, canvas_sis. Columns D onwards are filter variables.
+#' Columns A, B, C are name_canvas, id_canvas, sis_canvas. Columns D onwards are filter variables.
 #'
 #' @param course_directory A dribble of files of the selected course's directory
 #' @param filter_roster A string of the Roster's filename (same file as filter sheet)
@@ -307,18 +307,17 @@ get_filter_sheet <- function(course_directory,
     filter_temp <- googlesheets4::read_sheet(metadata, sheet = filter_sheet)
 
     # Basic validation - ensure we have the expected columns A, B, C
-    expected_cols <- c(1, 2, 3)  # columns A, B, C
     if (ncol(filter_temp) < 3) {
-      warning("Filter sheet must have at least 3 columns (A: canvas_name, B: canvas_id, C: canvas_sis)")
+      warning("Filter sheet must have at least 3 columns (A: name_canvas, B: id_canvas, C: sis_canvas)")
       return(NULL)
     }
     
     # Rename first three columns to standard names
-    colnames(filter_temp)[1:3] <- c("canvas_name", "canvas_id", "canvas_sis")
+    colnames(filter_temp)[1:3] <- c("name_canvas", "id_canvas", "sis_canvas")
     
-    # Filter out rows where both canvas_name and canvas_id are NA
+    # Filter out rows where both name_canvas and id_canvas are NA
     filter_temp <- filter_temp %>%
-      filter(!is.na(canvas_name) | !is.na(canvas_id))
+      filter(!is.na(name_canvas) | !is.na(id_canvas))
     
     # Remove any completely empty rows
     filter_temp <- filter_temp %>%
@@ -355,7 +354,7 @@ get_filter_variables <- function(course_directory,
       return(character(0))
     }
     
-    # Get columns D onwards (everything after canvas_name, canvas_id, canvas_sis)
+    # Get columns D onwards (everything after name_canvas, id_canvas, sis_canvas)
     filter_columns <- colnames(filter_data)[4:ncol(filter_data)]
     
     # Remove any columns that are completely NA

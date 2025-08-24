@@ -277,7 +277,7 @@ students_list_modal <- function(dataframe, title = "Students") {
 
 #' Join Quiz with Filter Sheet Data
 #'
-#' @description Join quiz responses with filter sheet data based on canvas_name or canvas_id matching.
+#' @description Join quiz responses with filter sheet data based on name_canvas or id_canvas matching.
 #'
 #' @param quiz A data frame with quiz responses.
 #' @param roster A data frame with basic roster information (for teachly data).
@@ -321,7 +321,7 @@ join_quiz_roster_with_filters <- function(quiz, roster, filter_sheet, col_to_mat
   match_success <- FALSE
   
   # Prepare filter data with selected variables
-  filter_cols_to_select <- c("canvas_name", "canvas_id")
+  filter_cols_to_select <- c("name_canvas", "id_canvas")
   available_filter_vars <- filter_vars[filter_vars %in% colnames(filter_sheet)]
   
   if (length(available_filter_vars) > 0) {
@@ -331,47 +331,54 @@ join_quiz_roster_with_filters <- function(quiz, roster, filter_sheet, col_to_mat
   filter_data <- filter_sheet %>%
     select(all_of(filter_cols_to_select))
 
-  # Try matching by canvas_name (assuming standardized_name in quiz corresponds to canvas_name)
-  tryCatch({
-    # First, try direct join if col_to_match corresponds to canvas_name
-    if ("canvas_name" %in% colnames(filter_data)) {
+  # Try matching by name_canvas first (most reliable)
+  result <- NULL
+  match_success <- FALSE
+  
+  # Method 1: Try matching by name_canvas
+  if ("name_canvas" %in% colnames(filter_data)) {
+    tryCatch({
       result <- quiz_with_roster %>%
         left_join(
           filter_data %>% 
-            select(-canvas_id) %>%  # Remove canvas_id to avoid conflicts
-            rename(!!col_to_match := canvas_name),
+            select(-id_canvas) %>%  # Remove id_canvas to avoid conflicts
+            rename(!!col_to_match := name_canvas),
           by = col_to_match
         )
       match_success <- TRUE
-      return(result)
-    }
-  }, error = function(e) {
-    # If direct join fails, continue to next method
-  })
+    }, error = function(e) {
+      # Continue to next method if this fails
+      match_success <<- FALSE
+    })
+  }
   
-  # If direct join didn't work, try matching by canvas_id
-  if (!match_success && "canvas_id" %in% colnames(filter_data)) {
+  # Method 2: If name_canvas matching failed, try matching by id_canvas
+  if (!match_success && "id_canvas" %in% colnames(filter_data)) {
     tryCatch({
       result <- quiz_with_roster %>%
         left_join(
           filter_data %>%
-            select(-canvas_name) %>%  # Remove canvas_name to avoid conflicts
-            rename(!!col_to_match := canvas_id),
+            select(-name_canvas) %>%  # Remove name_canvas to avoid conflicts
+            rename(!!col_to_match := id_canvas),
           by = col_to_match
         )
       match_success <- TRUE
-      return(result)
     }, error = function(e) {
-      # If this also fails, return original data with empty filter columns
+      # Continue to fallback if this also fails
+      match_success <<- FALSE
     })
   }
   
-  # If all matching attempts failed, add empty filter columns
-  if (!match_success && length(available_filter_vars) > 0) {
-    for (var in available_filter_vars) {
-      quiz_with_roster[[var]] <- NA
+  # If all matching attempts failed, add empty filter columns and return original data
+  if (!match_success) {
+    if (length(available_filter_vars) > 0) {
+      for (var in available_filter_vars) {
+        quiz_with_roster[[var]] <- NA
+      }
     }
+    return(quiz_with_roster)
   }
   
-  return(quiz_with_roster)
+  # Return the successfully matched result
+  return(result)
 }
