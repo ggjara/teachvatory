@@ -316,69 +316,108 @@ join_quiz_roster_with_filters <- function(quiz, roster, filter_sheet, col_to_mat
     return(quiz_with_roster)
   }
 
-  # Try to match by canvas_name first (most reliable)
-  # Create a mapping between standardized_name and canvas_name/canvas_id
-  match_success <- FALSE
+  # The roster is the source of truth. Use it to bridge quiz data to filter sheet data
+  # We need to match roster records to filter sheet records using Canvas information
   
   # Prepare filter data with selected variables
-  filter_cols_to_select <- c("name_canvas", "id_canvas")
   available_filter_vars <- filter_vars[filter_vars %in% colnames(filter_sheet)]
   
-  if (length(available_filter_vars) > 0) {
-    filter_cols_to_select <- c(filter_cols_to_select, available_filter_vars)
-  }
-  
-  filter_data <- filter_sheet %>%
-    select(all_of(filter_cols_to_select))
-
-  # Try matching by name_canvas first (most reliable)
-  result <- NULL
-  match_success <- FALSE
-  
-  # Method 1: Try matching by name_canvas
-  if ("name_canvas" %in% colnames(filter_data)) {
-    tryCatch({
-      result <- quiz_with_roster %>%
-        left_join(
-          filter_data %>% 
-            select(-id_canvas) %>%  # Remove id_canvas to avoid conflicts
-            rename(!!col_to_match := name_canvas),
-          by = col_to_match
-        )
-      match_success <- TRUE
-    }, error = function(e) {
-      # Continue to next method if this fails
-      match_success <<- FALSE
-    })
-  }
-  
-  # Method 2: If name_canvas matching failed, try matching by id_canvas
-  if (!match_success && "id_canvas" %in% colnames(filter_data)) {
-    tryCatch({
-      result <- quiz_with_roster %>%
-        left_join(
-          filter_data %>%
-            select(-name_canvas) %>%  # Remove name_canvas to avoid conflicts
-            rename(!!col_to_match := id_canvas),
-          by = col_to_match
-        )
-      match_success <- TRUE
-    }, error = function(e) {
-      # Continue to fallback if this also fails
-      match_success <<- FALSE
-    })
-  }
-  
-  # If all matching attempts failed, add empty filter columns and return original data
-  if (!match_success) {
-    if (length(available_filter_vars) > 0) {
-      for (var in available_filter_vars) {
-        quiz_with_roster[[var]] <- NA
-      }
-    }
+  if (length(available_filter_vars) == 0) {
     return(quiz_with_roster)
   }
   
-  # Return the successfully matched result
+  # Create a mapping from roster to filter sheet using Canvas columns
+  # This will map standardized_name to the filter variables
+  
+  # Start with empty filter data for each student
+  filter_mapping <- data.frame(
+    standardized_name = unique(quiz_with_roster[[col_to_match]]),
+    stringsAsFactors = FALSE
+  )
+  
+  # Add filter variables as empty columns
+  for (var in available_filter_vars) {
+    filter_mapping[[var]] <- NA
+  }
+  
+  # For each student in the quiz, try to find their filter data
+  for (i in seq_len(nrow(filter_mapping))) {
+    student_name <- filter_mapping$standardized_name[i]
+    
+    # Get the roster record for this student
+    roster_record <- roster %>%
+      filter(standardized_name == student_name) %>%
+      slice(1)  # Take first if duplicates
+    
+    if (nrow(roster_record) == 0) next
+    
+    matched_filter_row <- NULL
+    
+    # Priority 1: Match by sis_canvas (Harvard ID) if available
+    if ("sis_canvas" %in% colnames(roster_record) && 
+        !is.na(roster_record$sis_canvas) && 
+        roster_record$sis_canvas != "") {
+      matched_filter_row <- filter_sheet %>%
+        filter(!is.na(sis_canvas) & sis_canvas == roster_record$sis_canvas) %>%
+        slice(1)
+    }
+    
+    # Priority 2: Match by email_canvas if no sis_canvas match
+    if ((is.null(matched_filter_row) || nrow(matched_filter_row) == 0) &&
+        "email_canvas" %in% colnames(roster_record) && 
+        !is.na(roster_record$email_canvas) && 
+        roster_record$email_canvas != "") {
+      matched_filter_row <- filter_sheet %>%
+        filter(!is.na(email_canvas) & email_canvas == roster_record$email_canvas) %>%
+        slice(1)
+    }
+    
+    # Priority 3: Match by name_canvas with string similarity if no email match
+    if ((is.null(matched_filter_row) || nrow(matched_filter_row) == 0) &&
+        "name_canvas" %in% colnames(roster_record) && 
+        !is.na(roster_record$name_canvas) && 
+        roster_record$name_canvas != "") {
+      
+      # First try exact match
+      matched_filter_row <- filter_sheet %>%
+        filter(!is.na(name_canvas) & name_canvas == roster_record$name_canvas) %>%
+        slice(1)
+      
+      # If no exact match, try string similarity
+      if (nrow(matched_filter_row) == 0) {
+        filter_names <- filter_sheet %>%
+          filter(!is.na(name_canvas) & name_canvas != "") %>%
+          pull(name_canvas)
+        
+        if (length(filter_names) > 0) {
+          # Calculate string distances
+          distances <- stringr::str_distance(roster_record$name_canvas, filter_names, method = "jw")
+          min_distance <- min(distances, na.rm = TRUE)
+          
+          # Use a threshold for similarity (0.2 means 80% similarity)
+          if (min_distance <= 0.2) {
+            best_match_name <- filter_names[which.min(distances)]
+            matched_filter_row <- filter_sheet %>%
+              filter(name_canvas == best_match_name) %>%
+              slice(1)
+          }
+        }
+      }
+    }
+    
+    # If we found a match, copy the filter values
+    if (!is.null(matched_filter_row) && nrow(matched_filter_row) > 0) {
+      for (var in available_filter_vars) {
+        if (var %in% colnames(matched_filter_row)) {
+          filter_mapping[i, var] <- matched_filter_row[[var]]
+        }
+      }
+    }
+  }
+  
+  # Join the quiz_with_roster data with the filter mapping
+  result <- quiz_with_roster %>%
+    left_join(filter_mapping, by = setNames("standardized_name", col_to_match))
+  
   return(result)
 }
