@@ -106,6 +106,13 @@ mod_metrics_ui <- function(id) {
                           shiny::textOutput(outputId = ns("n_lastquizzes_output"),
                                             inline = TRUE),
                           " quizzes."),
+            shiny::div(
+              style = "margin-bottom: 10px;",
+              shiny::downloadButton(ns("download_selected_csv"), "CSV (Selected)", 
+                                  class = "btn btn-default btn-sm",
+                                  style = "margin-right: 5px; font-size: 12px; padding: 4px 8px;")
+            ),
+            shiny::tags$br(),
             shinycssloaders::withSpinner(DT::DTOutput(ns(
               "metrics_lastquizzes"
             ))),
@@ -115,11 +122,34 @@ mod_metrics_ui <- function(id) {
           ),
           bs4Dash::column(
             width = 6,
+            shinyWidgets::radioGroupButtons(
+              inputId = ns("email_target"),
+              label = "Send emails to:",
+              choices = c("All students in table" = "all", "Selected students only" = "selected"),
+              selected = "all",
+              status = "primary",
+              size = "normal",
+              individual = TRUE,
+              checkIcon = list(
+                yes = shiny::icon("check"),
+                no = shiny::icon("times")
+              )
+            ),
+            shiny::conditionalPanel(
+              condition = "input.email_target == 'selected'",
+              ns = ns,
+              shiny::div(
+                style = "margin-top: 10px; padding: 8px; background-color: #f8f9fa; border-left: 4px solid #007bff; border-radius: 4px;",
+                shiny::tags$strong("Selected students for email:"),
+                shiny::tags$br(),
+                shiny::textOutput(ns("selected_students_preview"))
+              )
+            ),
             textInput(ns("subject"), "Email Subject:", "Reminder: Missing Assignments"),
             textAreaInput(
               ns("message"),
               "Email Message:",
-              "Dear [Name],\n\nWe have noticed that you haven’t submitted your recent assignments. Please take a moment to submit them at your earliest convenience. If you’re facing any challenges, feel free to reach out for support.\n\nBest regards,\n\nThe Teaching Team\n\nThis email is not monitored. If you have any questions, please reply directly to Professor Levy, who is cc'ed here.\n"
+              "Dear [Name],\n\nWe have noticed that you haven't submitted your recent assignments. Please take a moment to submit them at your earliest convenience. If you're facing any challenges, feel free to reach out for support.\n\nBest regards,\n\nThe Teaching Team\n\nThis email is not monitored. If you have any questions, please reply directly to Professor Levy, who is cc'ed here.\n"
             ),
             actionButton(ns("send_email"), "Send Email"),
             verbatimTextOutput(ns("email_status"))
@@ -234,25 +264,49 @@ mod_metrics_server <-
         # Quizzes
         quizzes_cols <- quiz_cols()
 
-        # Total
-        metrics_temp$dataframe$total <-
-          rowSums(metrics_temp$dataframe[, quizzes_cols])
+        # Total completed quizzes (convert to numeric first to handle TRUE/FALSE or 1/0)
+        metrics_temp$dataframe$total_completed <-
+          rowSums(as.data.frame(lapply(metrics_temp$dataframe[, quizzes_cols, drop = FALSE], as.numeric)), na.rm = TRUE)
+        
+        # Total missed quizzes
+        metrics_temp$dataframe$total_missed <-
+          length(quizzes_cols) - metrics_temp$dataframe$total_completed
+        
+        # Keep the old 'total' column for backward compatibility
+        metrics_temp$dataframe$total <- metrics_temp$dataframe$total_completed
 
-        # Sparkline
-        metrics_trend <-  metrics_temp$dataframe |>
-          dplyr::select("standardized_name", rev(all_of(quizzes_cols))) |>
-          tidyr::pivot_longer(!standardized_name,
-                              names_to = "quiz",
-                              values_to = "value") |>
-          dplyr::mutate(value = as.integer(value)) |>
-          dplyr::group_by(standardized_name) |>
-          dplyr::mutate(value = cumsum(value)) |>
-          dplyr::summarize(Trend = sparkline::spk_chr(
-            value,
-            type = "line",
-            chartRangeMin = 0,
-            chartRangeMax = max(value)
-          ))
+        # Sparkline - only create if we have quiz columns
+        if (length(quizzes_cols) > 0) {
+          # Check which quiz columns actually exist in the dataframe
+          available_quiz_cols <- intersect(quizzes_cols, names(metrics_temp$dataframe))
+          
+          if (length(available_quiz_cols) > 0) {
+            metrics_trend <-  metrics_temp$dataframe |>
+              dplyr::select("standardized_name", all_of(rev(available_quiz_cols))) |>
+              tidyr::pivot_longer(!standardized_name,
+                                  names_to = "quiz",
+                                  values_to = "value") |>
+              dplyr::mutate(value = as.integer(value)) |>
+              dplyr::group_by(standardized_name) |>
+              dplyr::mutate(value = cumsum(value)) |>
+              dplyr::summarize(Trend = sparkline::spk_chr(
+                value,
+                type = "line",
+                chartRangeMin = 0,
+                chartRangeMax = max(value)
+              ))
+          } else {
+            # Create empty trend column if no quiz columns available
+            metrics_trend <- metrics_temp$dataframe |>
+              dplyr::select(standardized_name) |>
+              dplyr::mutate(Trend = "")
+          }
+        } else {
+          # Create empty trend column if no quizzes selected
+          metrics_trend <- metrics_temp$dataframe |>
+            dplyr::select(standardized_name) |>
+            dplyr::mutate(Trend = "")
+        }
 
         metrics_temp$dataframe |>
           dplyr::left_join(metrics_trend)
@@ -262,28 +316,63 @@ mod_metrics_server <-
       metrics_lastquizzes <- shiny::reactive({
         metrics_temp <- metrics_ini()
 
-        # Quizzes
-        quizzes_cols <- quiz_cols()[1:input$n_lastquizzes]
+        # Quizzes - get the last N quizzes (most recent ones)
+        all_quizzes <- quiz_cols()
+        quizzes_cols <- all_quizzes[1:min(input$n_lastquizzes, length(all_quizzes))]
 
-        # Total
-        metrics_temp$dataframe$total <-
-          rowSums(metrics_temp$dataframe[, quizzes_cols])
+        # Calculate total completed in ALL quizzes (convert to numeric first)
+        metrics_temp$dataframe$total_completed <-
+          rowSums(as.data.frame(lapply(metrics_temp$dataframe[, all_quizzes, drop = FALSE], as.numeric)), na.rm = TRUE)
+        
+        # Calculate total missed in ALL quizzes
+        metrics_temp$dataframe$total_missed <-
+          length(all_quizzes) - metrics_temp$dataframe$total_completed
+        
+        # Calculate missed count in the LAST N quizzes specifically (convert to numeric first)
+        last_n_data <- as.data.frame(lapply(metrics_temp$dataframe[, quizzes_cols, drop = FALSE], as.numeric))
+        metrics_temp$dataframe$last_n_missed <- 
+          rowSums(last_n_data == 0, na.rm = TRUE)
+        
+        # Calculate completed count in the LAST N quizzes
+        metrics_temp$dataframe$last_n_completed <-
+          rowSums(last_n_data, na.rm = TRUE)
+        
+        # Keep backward compatibility
+        metrics_temp$dataframe$missed_count <- metrics_temp$dataframe$last_n_missed
+        metrics_temp$dataframe$total <- metrics_temp$dataframe$total_completed
 
-        # Sparkline
-        metrics_trend <-  metrics_temp$dataframe |>
-          dplyr::select("standardized_name", rev(all_of(quizzes_cols))) |>
-          tidyr::pivot_longer(!standardized_name,
-                              names_to = "quiz",
-                              values_to = "value") |>
-          dplyr::mutate(value = as.integer(value)) |>
-          dplyr::group_by(standardized_name) |>
-          dplyr::mutate(value = cumsum(value)) |>
-          dplyr::summarize(Trend = sparkline::spk_chr(
-            value,
-            type = "line",
-            chartRangeMin = 0,
-            chartRangeMax = max(value)
-          ))
+        # Sparkline - only create if we have quiz columns
+        if (length(quizzes_cols) > 0) {
+          # Check which quiz columns actually exist in the dataframe
+          available_quiz_cols <- intersect(quizzes_cols, names(metrics_temp$dataframe))
+          
+          if (length(available_quiz_cols) > 0) {
+            metrics_trend <-  metrics_temp$dataframe |>
+              dplyr::select("standardized_name", all_of(rev(available_quiz_cols))) |>
+              tidyr::pivot_longer(!standardized_name,
+                                  names_to = "quiz",
+                                  values_to = "value") |>
+              dplyr::mutate(value = as.integer(value)) |>
+              dplyr::group_by(standardized_name) |>
+              dplyr::mutate(value = cumsum(value)) |>
+              dplyr::summarize(Trend = sparkline::spk_chr(
+                value,
+                type = "line",
+                chartRangeMin = 0,
+                chartRangeMax = max(value)
+              ))
+          } else {
+            # Create empty trend column if no quiz columns available
+            metrics_trend <- metrics_temp$dataframe |>
+              dplyr::select(standardized_name) |>
+              dplyr::mutate(Trend = "")
+          }
+        } else {
+          # Create empty trend column if no quizzes selected
+          metrics_trend <- metrics_temp$dataframe |>
+            dplyr::select(standardized_name) |>
+            dplyr::mutate(Trend = "")
+        }
 
         metrics_temp$dataframe |>
           dplyr::left_join(metrics_trend)
@@ -303,25 +392,26 @@ mod_metrics_server <-
         clrs <-
           colorRampPalette(c("#dc3545", "#ffc107", "#28a745"))(length(brks) + 1)
 
-        # DT
+        # DT - Show students who missed the specified number of last quizzes
         DT::datatable(
           metrics_lastquizzes() |>
-            dplyr::filter(total==0) |>
+            dplyr::filter(last_n_missed >= input$n_lastquizzes) |>
             dplyr::select(
               standardized_name,
+              email_teachly,
               teachly_cols
             ) |>
             data.table::setnames(
               old = c(
                 "standardized_name",
-                "total",
+                "email_teachly",
                 "teachly",
                 "teachly_comments",
                 "teachly_absences"
               ),
               new = c(
                 "Name",
-                "Total",
+                "Email",
                 "Teachly score",
                 "Teachly comments",
                 "Teachly absences"
@@ -333,7 +423,7 @@ mod_metrics_server <-
           extensions = "Buttons",
           #style = "bootstrap4",
           filter = "top",
-          selection = "none",
+          selection = "multiple",
           options = list(
             pageLength = 100,
             autowidth = TRUE,
@@ -385,21 +475,24 @@ function(){
             dplyr::select(
               standardized_name,
               teachly_cols,
-              total,
+              total_completed,
+              total_missed,
               Trend,
               quizzes_cols
             ) |>
             data.table::setnames(
               old = c(
                 "standardized_name",
-                "total",
+                "total_completed",
+                "total_missed",
                 "teachly",
                 "teachly_comments",
                 "teachly_absences"
               ),
               new = c(
                 "Name",
-                "Total",
+                "Total Completed",
+                "Total Missed",
                 "Teachly score",
                 "Teachly comments",
                 "Teachly absences"
@@ -451,14 +544,55 @@ function(){
           })()
       })
 
+      ## Selected students preview -------
+      output$selected_students_preview <- shiny::renderText({
+        selected_rows <- input$metrics_lastquizzes_rows_selected
+        
+        if (is.null(selected_rows) || length(selected_rows) == 0) {
+          return("No students selected. Please select students by clicking the checkboxes in the left table.")
+        }
+        
+        # Get the data and filter for selected rows
+        data <- metrics_lastquizzes() |>
+          dplyr::filter(last_n_missed >= input$n_lastquizzes) |>
+          dplyr::select(standardized_name, email_teachly)
+        
+        selected_data <- data[selected_rows, ]
+        
+        # Create preview text
+        preview_text <- paste(
+          paste(selected_data$standardized_name, "(" , selected_data$email_teachly, ")", sep = ""),
+          collapse = "\n"
+        )
+        
+        return(paste("Selected", nrow(selected_data), "students:\n", preview_text))
+      })
+
       ## Emails -------
       # Send email when the button is clicked
       observeEvent(input$send_email, {
-        # Get data from metrics_lastquizzes and filter for students with total == 0
+        # Get data from metrics_lastquizzes
         data <- metrics_lastquizzes()
-        missing_students <- data |>
-          dplyr::filter(total == 0) |>
-          dplyr::select(standardized_name, email_teachly, total)
+        all_missing_students <- data |>
+          dplyr::filter(last_n_missed >= input$n_lastquizzes) |>
+          dplyr::select(standardized_name, email_teachly, last_n_missed)
+        
+        # Determine which students to email based on user choice
+        if (input$email_target == "selected") {
+          # Get selected rows
+          selected_rows <- input$metrics_lastquizzes_rows_selected
+          
+          if (is.null(selected_rows) || length(selected_rows) == 0) {
+            output$email_status <- renderText("Please select students first by clicking the checkboxes.")
+            return()
+          }
+          
+          # Filter for only selected rows
+          missing_students <- all_missing_students[selected_rows, ]
+        } else {
+          # Send to all students in the table
+          missing_students <- all_missing_students
+        }
 
         # Initialize success flag, error message, and list to track sent emails
         all_emails_sent    <- TRUE
@@ -528,6 +662,38 @@ function(){
         })
 
       }) # end
+
+      ## Download handlers for selected rows -------
+      output$download_selected_csv <- downloadHandler(
+        filename = function() {
+          paste("selected_students_", Sys.Date(), ".csv", sep = "")
+        },
+        content = function(file) {
+          # Get selected rows
+          selected_rows <- input$metrics_lastquizzes_rows_selected
+          
+          if (is.null(selected_rows) || length(selected_rows) == 0) {
+            # If no rows selected, show message
+            showNotification("Please select students first by clicking the checkboxes.", type = "warning")
+            return()
+          }
+          
+          # Get the data and filter for selected rows
+          data <- metrics_lastquizzes() |>
+            dplyr::filter(last_n_missed >= input$n_lastquizzes) |>
+            dplyr::select(
+              standardized_name,
+              email_teachly,
+              input$teachly_columns
+            )
+          
+          selected_data <- data[selected_rows, ]
+          
+          # Write to CSV
+          write.csv(selected_data, file, row.names = FALSE)
+        }
+      )
+      
 
 
     })

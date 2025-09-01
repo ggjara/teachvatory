@@ -37,3 +37,5 @@ rsconnect/
 .secrets.emails/gmail_creds
 
 test_simple.R
+
+.github/copilot-instructions.md
