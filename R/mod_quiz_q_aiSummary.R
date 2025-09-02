@@ -8,6 +8,7 @@
 #'
 #' @importFrom shiny NS tagList
 #' @import highcharter
+#' @importFrom ellmer chat
 mod_quiz_aiSummary_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -241,22 +242,14 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
         )
 
 
-        client <- openai::OpenAI()
-        completion <- client$chat$completions$create(
-          model = "gpt-4o",
-          messages = list(
-            list(
-              "role" = "system",
-              "content" = prompt_content
-            ),
-            list(
-              "role" = "user",
-              "content" = question_text
-            )
-          ),
-          temperature = 0.6  # Adjust the temperature here (0.0 to 1.0)
-        )
-        result_text <- completion$choices[[1]]$message$content
+        # Create Ellmer chat object and get completion using configured settings
+        chat_obj <- create_ai_chat()
+        
+        # Combine system and user messages for the chat
+        full_prompt <- paste0(prompt_content, "\n\n", question_text)
+        
+        completion <- chat_obj$chat(full_prompt)
+        result_text <- completion
 
         # If there are 5 or fewer answers, append the warning message
         if (num_answers <= 5) {
