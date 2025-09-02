@@ -2,7 +2,19 @@ default:
   golem_name: teachvatory
   golem_version: 0.0.0.9000
   app_prod: no
+  ai:
+    model: "gpt-5"
+    provider: "openai"
+    temperature: 0.3
 production:
   app_prod: yes
+  ai:
+    model: "gpt-5"
+    provider: "openai"
+    temperature: 0.3
 dev:
   golem_wd: !expr here::here()
+  ai:
+    model: "gpt-5"
+    provider: "openai"
+    temperature: 0.3

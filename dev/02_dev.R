@@ -16,6 +16,10 @@
 ## Dependencies ----
 ## Amend DESCRIPTION with dependencies read from package code parsing
 ## install.package('attachment') # if needed.
+
+## Add Ellmer package dependency for AI functionality
+usethis::use_package("ellmer")
+
 attachment::att_amend_desc()
 
 ## Add modules ----
