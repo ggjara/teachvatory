@@ -243,7 +243,7 @@ mod_quiz_aiSummary_server <- function(id, stringAsFactors = FALSE, main_inputs, 
 
         client <- openai::OpenAI()
         completion <- client$chat$completions$create(
-          model = "gpt-4o",
+          model = "gpt-5",
           messages = list(
             list(
               "role" = "system",
