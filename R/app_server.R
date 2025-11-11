@@ -10,6 +10,15 @@ app_server <- function(input, output, session) {
     sign_out_from_shiny()
     session$reload()
   })
+  
+  # Setup Ellmer for AI functionality
+  if (!is_ellmer_configured()) {
+    showNotification(
+      "AI features may not work properly. Please check your OpenAI API key configuration.",
+      type = "warning",
+      duration = 10
+    )
+  }
 
 
   output$user_panel <- renderUser({

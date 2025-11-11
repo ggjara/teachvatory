@@ -8,6 +8,7 @@
 #'
 #' @importFrom shiny NS tagList
 #' @import highcharter
+#' @importFrom ellmer chat
 mod_quiz_aiQuotes_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -169,14 +170,12 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
           paste(collapse = " • ")
 
 
-        client <- openai::OpenAI()
-        completion <- client$chat$completions$create(
-          model = "gpt-4o",
-          messages = list(
-            list(
-              "role" = "system",
-              "content" = paste(
-                "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class.
+        # Create Ellmer chat object and get completion using configured settings
+        chat_obj <- create_ai_chat()
+        
+        # Combine system and user messages for the chat
+        system_prompt <- paste(
+          "As an AI teaching assistant, your task is to analyse students' responses to a question posed in class.
 
             I will provide the question and the students' answers. The students' answers will be provided as follow:
             [Student 1 LastName, Student 1 FirstName: Student 1 Answer | Student 1 Teachly score  • Student 2 LastName, Student 2 FirstName: Student 2 Answer| Student 2 Teachly score • ...]
@@ -189,19 +188,18 @@ mod_quiz_aiQuotes_server <- function(id, stringAsFactors = FALSE, main_inputs, q
             3) Format your response strictly as follows (DO NOT USE Markdown):
             <b>Quotes:</b><br> Student i's Answer <br>( <i> Student i FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student i Teachly Score </i> <br><br> Student j's Answer <br>( <i> Student j FirstName LastName </i> )<br> <i>TEACHLY SCORE: Student j Teachly Score </i> <br><br>
             5) Be very careful with the names, be sure to write them as FirstName Lastname, in that order.
-                           ")
-            ),
-            list(
-              "role" = "user",
-              "content" = paste0("
+                           "
+        )
+        
+        user_content <- paste0("
             Question: ", input$quizviz_question,"
 
             Answers:", answers_concat)
-            )
-          ),
-          temperature = 0.7  # Adjust the temperature here (0.0 to 1.0)
-        )
-        result_text <- completion$choices[[1]]$message$content
+        
+        full_prompt <- paste0(system_prompt, "\n\n", user_content)
+        
+        completion <- chat_obj$chat(full_prompt)
+        result_text <- completion
 
         # If there are 5 or fewer answers, append the warning message
         if (num_answers <= 5) {
